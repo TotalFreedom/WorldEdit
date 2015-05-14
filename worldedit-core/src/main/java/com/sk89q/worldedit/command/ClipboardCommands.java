@@ -84,7 +84,11 @@ public class ClipboardCommands {
     public void copy(Player player, LocalSession session, EditSession editSession,
                      @Selection Region region, @Switch('e') boolean copyEntities,
                      @Switch('m') Mask mask) throws WorldEditException {
-
+        if(region.getArea() > session.getBlockChangeLimit())
+        {
+            player.print(region.getArea() + " blocks is too large.");
+            return;
+        }
         BlockArrayClipboard clipboard = new BlockArrayClipboard(region);
         clipboard.setOrigin(session.getPlacementPosition(player));
         ForwardExtentCopy copy = new ForwardExtentCopy(editSession, region, clipboard, region.getMinimumPoint());
@@ -115,7 +119,13 @@ public class ClipboardCommands {
     public void cut(Player player, LocalSession session, EditSession editSession,
                     @Selection Region region, @Optional("air") Pattern leavePattern, @Switch('e') boolean copyEntities,
                     @Switch('m') Mask mask) throws WorldEditException {
-
+                        
+        if(region.getArea() > session.getBlockChangeLimit())
+        {
+            player.print(region.getArea() + " blocks is too large.");
+            return;
+        }
+        
         BlockArrayClipboard clipboard = new BlockArrayClipboard(region);
         clipboard.setOrigin(session.getPlacementPosition(player));
         ForwardExtentCopy copy = new ForwardExtentCopy(editSession, region, clipboard, region.getMinimumPoint());
