@@ -358,6 +358,11 @@ public class RegionCommands {
     @CommandPermissions("worldedit.regen")
     @Logging(REGION)
     public void regenerateChunk(Player player, LocalSession session, EditSession editSession, @Selection Region region) throws WorldEditException {
+        if(region.getArea() > session.getBlockChangeLimit())
+        {
+            player.print(region.getArea() + " blocks is too large.");
+            return;
+        }
         Mask mask = session.getMask();
         try {
             session.setMask((Mask) null);
