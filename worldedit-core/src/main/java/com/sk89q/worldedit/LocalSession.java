@@ -19,6 +19,7 @@
 
 package com.sk89q.worldedit;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import com.sk89q.jchronic.Chronic;
 import com.sk89q.jchronic.Options;
 import com.sk89q.jchronic.utils.Span;
@@ -44,16 +45,13 @@ import com.sk89q.worldedit.session.ClipboardHolder;
 import com.sk89q.worldedit.session.request.Request;
 import com.sk89q.worldedit.world.World;
 import com.sk89q.worldedit.world.snapshot.Snapshot;
-
-import javax.annotation.Nullable;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import javax.annotation.Nullable;
 
 /**
  * Stores session information.
@@ -701,6 +699,10 @@ public class LocalSession {
 
         if (hasCUISupport) {
             actor.dispatchCUIEvent(event);
+        }
+
+        if (actor instanceof com.sk89q.worldedit.entity.Player) {
+            me.StevenLawson.worldedit.WorldEditHandler.selectionChanged((com.sk89q.worldedit.entity.Player) actor);
         }
     }
 
