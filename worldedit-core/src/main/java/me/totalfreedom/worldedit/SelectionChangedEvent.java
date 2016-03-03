@@ -1,4 +1,4 @@
-package me.StevenLawson.worldedit;
+package me.totalfreedom.worldedit;
 
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -37,11 +37,6 @@ public class SelectionChangedEvent extends PlayerEvent implements Cancellable {
     }
 
     @Override
-    public HandlerList getHandlers() {
-        return handlers;
-    }
-
-    @Override
     public boolean isCancelled() {
         return cancelled;
     }
@@ -49,6 +44,11 @@ public class SelectionChangedEvent extends PlayerEvent implements Cancellable {
     @Override
     public void setCancelled(boolean bln) {
         this.cancelled = bln;
+    }
+
+    @Override
+    public HandlerList getHandlers() {
+        return handlers;
     }
 
     public static HandlerList getHandlerList() {

@@ -40,7 +40,7 @@ import com.sk89q.worldedit.extension.input.ParserContext;
 import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.internal.registry.InputParser;
 import com.sk89q.worldedit.world.World;
-import me.StevenLawson.worldedit.WorldEditHandler;
+import me.totalfreedom.worldedit.WorldEditHandler;
 
 /**
  * Parses block input strings.

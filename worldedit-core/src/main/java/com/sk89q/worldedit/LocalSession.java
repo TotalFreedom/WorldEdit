@@ -702,7 +702,7 @@ public class LocalSession {
         }
 
         if (actor instanceof com.sk89q.worldedit.entity.Player) {
-            me.StevenLawson.worldedit.WorldEditHandler.selectionChanged((com.sk89q.worldedit.entity.Player) actor);
+            me.totalfreedom.worldedit.WorldEditHandler.selectionChanged((com.sk89q.worldedit.entity.Player) actor);
         }
     }
 
