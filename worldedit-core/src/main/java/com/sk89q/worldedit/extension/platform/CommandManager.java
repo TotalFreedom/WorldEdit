@@ -28,9 +28,36 @@ import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.LocalConfiguration;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
-import com.sk89q.worldedit.command.*;
+import com.sk89q.worldedit.command.BiomeCommands;
+import com.sk89q.worldedit.command.BrushCommands;
+import com.sk89q.worldedit.command.ChunkCommands;
+import com.sk89q.worldedit.command.ClipboardCommands;
+import com.sk89q.worldedit.command.GeneralCommands;
+import com.sk89q.worldedit.command.GenerationCommands;
+import com.sk89q.worldedit.command.HistoryCommands;
+import com.sk89q.worldedit.command.NavigationCommands;
+import com.sk89q.worldedit.command.RegionCommands;
+import com.sk89q.worldedit.command.SchematicCommands;
+import com.sk89q.worldedit.command.ScriptingCommands;
+import com.sk89q.worldedit.command.SelectionCommands;
+import com.sk89q.worldedit.command.SnapshotCommands;
+import com.sk89q.worldedit.command.SnapshotUtilCommands;
+import com.sk89q.worldedit.command.SuperPickaxeCommands;
+import com.sk89q.worldedit.command.ToolCommands;
+import com.sk89q.worldedit.command.ToolUtilCommands;
+import com.sk89q.worldedit.command.UtilityCommands;
+import com.sk89q.worldedit.command.WorldEditCommands;
+import com.sk89q.worldedit.command.argument.ReplaceParser;
+import com.sk89q.worldedit.command.argument.TreeGeneratorParser;
+import com.sk89q.worldedit.command.composition.ApplyCommand;
+import com.sk89q.worldedit.command.composition.DeformCommand;
+import com.sk89q.worldedit.command.composition.PaintCommand;
+import com.sk89q.worldedit.command.composition.SelectionCommand;
+import com.sk89q.worldedit.command.composition.ShapedBrushCommand;
 import com.sk89q.worldedit.event.platform.CommandEvent;
 import com.sk89q.worldedit.event.platform.CommandSuggestionEvent;
+import com.sk89q.worldedit.function.factory.Deform;
+import com.sk89q.worldedit.function.factory.Deform.Mode;
 import com.sk89q.worldedit.internal.command.ActorAuthorizer;
 import com.sk89q.worldedit.internal.command.CommandLoggingHandler;
 import com.sk89q.worldedit.internal.command.UserCommandCompleter;
@@ -39,7 +66,9 @@ import com.sk89q.worldedit.internal.command.WorldEditExceptionConverter;
 import com.sk89q.worldedit.session.request.Request;
 import com.sk89q.worldedit.util.command.Dispatcher;
 import com.sk89q.worldedit.util.command.InvalidUsageException;
+import com.sk89q.worldedit.util.command.composition.ProvidedValue;
 import com.sk89q.worldedit.util.command.fluent.CommandGraph;
+import com.sk89q.worldedit.util.command.parametric.ExceptionConverter;
 import com.sk89q.worldedit.util.command.parametric.LegacyCommandsHandler;
 import com.sk89q.worldedit.util.command.parametric.ParametricBuilder;
 import com.sk89q.worldedit.util.eventbus.Subscribe;
@@ -56,6 +85,7 @@ import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.sk89q.worldedit.util.command.composition.LegacyCommandAdapter.adapt;
 
 /**
  * Handles the registration and invocation of commands.
@@ -67,12 +97,13 @@ public final class CommandManager {
     public static final Pattern COMMAND_CLEAN_PATTERN = Pattern.compile("^[/]+");
     private static final Logger log = Logger.getLogger(CommandManager.class.getCanonicalName());
     private static final Logger commandLog = Logger.getLogger(CommandManager.class.getCanonicalName() + ".CommandLog");
-    private static final java.util.regex.Pattern numberFormatExceptionPattern = java.util.regex.Pattern.compile("^For input string: \"(.*)\"$");
+    private static final Pattern numberFormatExceptionPattern = Pattern.compile("^For input string: \"(.*)\"$");
 
     private final WorldEdit worldEdit;
     private final PlatformManager platformManager;
     private final Dispatcher dispatcher;
     private final DynamicStreamHandler dynamicHandler = new DynamicStreamHandler();
+    private final ExceptionConverter exceptionConverter;
 
     /**
      * Create a new instance.
@@ -84,6 +115,7 @@ public final class CommandManager {
         checkNotNull(platformManager);
         this.worldEdit = worldEdit;
         this.platformManager = platformManager;
+        this.exceptionConverter = new WorldEditExceptionConverter(worldEdit);
 
         // Register this instance for command events
         worldEdit.getEventBus().register(this);
@@ -97,7 +129,7 @@ public final class CommandManager {
         builder.setAuthorizer(new ActorAuthorizer());
         builder.setDefaultCompleter(new UserCommandCompleter(platformManager));
         builder.addBinding(new WorldEditBinding(worldEdit));
-        builder.addExceptionConverter(new WorldEditExceptionConverter(worldEdit));
+        builder.addExceptionConverter(exceptionConverter);
         builder.addInvokeListener(new LegacyCommandsHandler());
         builder.addInvokeListener(new CommandLoggingHandler(worldEdit, commandLog));
 
@@ -118,6 +150,7 @@ public final class CommandManager {
                         .registerMethods(new ToolUtilCommands(worldEdit))
                         .registerMethods(new ToolCommands(worldEdit))
                         .registerMethods(new UtilityCommands(worldEdit))
+                        .register(adapt(new SelectionCommand(new ApplyCommand(new ReplaceParser(), "Set all blocks within selection"), "worldedit.region.set")), "/set")
                         .group("worldedit", "we")
                             .describeAs("WorldEdit commands")
                             .registerMethods(new WorldEditCommands(worldEdit))
@@ -133,7 +166,14 @@ public final class CommandManager {
                         .group("brush", "br")
                             .describeAs("Brushing commands")
                             .registerMethods(new BrushCommands(worldEdit))
-                            .parent()
+                            .register(adapt(new ShapedBrushCommand(new DeformCommand(), "worldedit.brush.deform")), "deform")
+                            .register(adapt(new ShapedBrushCommand(new ApplyCommand(new ReplaceParser(), "Set all blocks within region"), "worldedit.brush.set")), "set")
+                            .register(adapt(new ShapedBrushCommand(new PaintCommand(), "worldedit.brush.paint")), "paint")
+                            .register(adapt(new ShapedBrushCommand(new ApplyCommand(), "worldedit.brush.apply")), "apply")
+                            .register(adapt(new ShapedBrushCommand(new PaintCommand(new TreeGeneratorParser("treeType")), "worldedit.brush.forest")), "forest")
+                            .register(adapt(new ShapedBrushCommand(ProvidedValue.create(new Deform("y-=1", Mode.RAW_COORD), "Raise one block"), "worldedit.brush.raise")), "raise")
+                            .register(adapt(new ShapedBrushCommand(ProvidedValue.create(new Deform("y+=1", Mode.RAW_COORD), "Lower one block"), "worldedit.brush.lower")), "lower")
+                        .parent()
                         .group("superpickaxe", "pickaxe", "sp")
                             .describeAs("Super-pickaxe commands")
                             .registerMethods(new SuperPickaxeCommands(worldEdit))
@@ -144,6 +184,10 @@ public final class CommandManager {
                             .parent()
                         .graph()
                 .getDispatcher();
+    }
+
+    public ExceptionConverter getExceptionConverter() {
+        return exceptionConverter;
     }
 
     void register(Platform platform) {
@@ -218,6 +262,7 @@ public final class CommandManager {
 
         CommandLocals locals = new CommandLocals();
         locals.put(Actor.class, actor);
+        locals.put("arguments", event.getArguments());
 
         long start = System.currentTimeMillis();
 
@@ -282,6 +327,7 @@ public final class CommandManager {
         try {
             CommandLocals locals = new CommandLocals();
             locals.put(Actor.class, event.getActor());
+            locals.put("arguments", event.getArguments());
             event.setSuggestions(dispatcher.getSuggestions(event.getArguments(), locals));
         } catch (CommandException e) {
             event.getActor().printError(e.getMessage());

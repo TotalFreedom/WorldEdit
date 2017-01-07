@@ -33,6 +33,13 @@ public interface WorldData {
     BlockRegistry getBlockRegistry();
 
     /**
+     * Get the item registry.
+     *
+     * @return the item registry
+     */
+    ItemRegistry getItemRegistry();
+
+    /**
      * Get the entity registry.
      *
      * @return the entity registry

@@ -1,6 +1,6 @@
 println """
 *******************************************
- You are building WorldEdit! 
+ You are building WorldEdit!
 
  If you encounter trouble:
  1) Read COMPILING.md if you haven't yet
@@ -21,7 +21,7 @@ buildscript {
 
     configurations.all {
         resolutionStrategy {
-            force 'com.google.guava:guava:18.0'
+            force 'com.google.guava:guava:17.0'
         }
     }
 
@@ -48,18 +48,18 @@ if (!project.hasProperty("gitCommitHash")) {
 subprojects {
     apply plugin: 'java'
     apply plugin: 'maven'
-    apply plugin: 'checkstyle'
+    //apply plugin: 'checkstyle'
     apply plugin: 'com.github.johnrengelman.shadow'
     apply plugin: 'com.jfrog.artifactory-upload'
 
     group = 'com.sk89q.worldedit'
-    version = '6.0.2-SNAPSHOT'
+    version = '6.1.1-TF'
     ext.internalVersion = version + ";" + gitCommitHash
 
     sourceCompatibility = 1.6
     targetCompatibility = 1.6
 
-    checkstyle.configFile = new File(rootProject.projectDir, "config/checkstyle/checkstyle.xml")
+    //checkstyle.configFile = new File(rootProject.projectDir, "config/checkstyle/checkstyle.xml")
 
     repositories {
         mavenCentral()
@@ -91,8 +91,8 @@ subprojects {
         archives javadocJar
     }
 
-    build.dependsOn(checkstyleMain)
-    build.dependsOn(checkstyleTest)
+    //build.dependsOn(checkstyleMain)
+    //build.dependsOn(checkstyleTest)
     build.dependsOn(sourcesJar)
     build.dependsOn(javadocJar)
 
@@ -116,7 +116,7 @@ subprojects {
                 username = "${artifactory_user}"
                 password = "${artifactory_password}"
                 maven = true
-                
+
             }
         }
 

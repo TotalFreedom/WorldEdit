@@ -48,9 +48,11 @@
     </subpackage>
 
     <subpackage name="forge">
+      <allow pkg="codechicken.multipart"/>
       <allow pkg="cpw"/>
       <allow pkg="net.minecraft"/>
       <allow pkg="net.minecraftforge"/>
+      <allow pkg="com.mojang.authlib"/>
       <allow pkg="org.apache.logging.log4j"/>
       <allow pkg="org.lwjgl"/>
     </subpackage>

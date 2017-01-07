@@ -207,6 +207,7 @@ public final class BlockData {
             break;
 
         case BlockID.TRAP_DOOR:
+        case BlockID.IRON_TRAP_DOOR:
             int withoutOrientation = data & ~0x3;
             int orientation = data & 0x3;
             switch (orientation) {
@@ -241,7 +242,14 @@ public final class BlockData {
             return ((data + 1) & 0x3) | (data & ~0x3);
 
         case BlockID.ANVIL:
-            return data ^ 0x1;
+            int damage = data & ~0x3;
+            switch (data & 0x3) {
+            case 0: return 3 | damage;
+            case 2: return 1 | damage;
+            case 1: return 0 | damage;
+            case 3: return 2 | damage;
+            }
+            break;
 
         case BlockID.BED:
             return data & ~0x3 | (data + 1) & 0x3;
@@ -438,6 +446,7 @@ public final class BlockData {
             break;
 
         case BlockID.TRAP_DOOR:
+        case BlockID.IRON_TRAP_DOOR:
             int withoutOrientation = data & ~0x3;
             int orientation = data & 0x3;
             switch (orientation) {
@@ -471,7 +480,14 @@ public final class BlockData {
             return ((data + 3) & 0x3) | (data & ~0x3);
 
         case BlockID.ANVIL:
-            return data ^ 0x1;
+            int damage = data & ~0x3;
+            switch (data & 0x3) {
+            case 0: return 1 | damage;
+            case 2: return 3 | damage;
+            case 1: return 2 | damage;
+            case 3: return 0 | damage;
+            }
+            break;
 
         case BlockID.BED:
             return data & ~0x3 | (data - 1) & 0x3;
@@ -707,6 +723,7 @@ public final class BlockData {
             break;
 
         case BlockID.TRAP_DOOR:
+        case BlockID.IRON_TRAP_DOOR:
             switch (data & 0x3) {
             case 0:
             case 1:
@@ -810,6 +827,18 @@ public final class BlockData {
                     return data ^ flipX;
             }
             break;
+
+        case BlockID.ANVIL:
+            switch (data & 0x3) {
+                case 0:
+                case 2:
+                    return data ^ flipZ << 1;
+                case 1:
+                case 3:
+                    return data ^ flipX << 1;
+            }
+            break;
+
         }
 
         return data;

@@ -26,12 +26,14 @@ import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
 import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.blocks.BaseBlock;
+import com.sk89q.worldedit.blocks.BaseItem;
 import com.sk89q.worldedit.blocks.BaseItemStack;
 import com.sk89q.worldedit.blocks.LazyBlock;
 import com.sk89q.worldedit.entity.BaseEntity;
 import com.sk89q.worldedit.entity.Entity;
 import com.sk89q.worldedit.internal.Constants;
 import com.sk89q.worldedit.regions.Region;
+import com.sk89q.worldedit.util.Direction;
 import com.sk89q.worldedit.util.Location;
 import com.sk89q.worldedit.util.TreeGenerator.TreeType;
 import com.sk89q.worldedit.world.AbstractWorld;
@@ -41,20 +43,37 @@ import net.minecraft.block.Block;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.inventory.IInventory;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.LongHashMap;
 import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.gen.ChunkProviderServer;
+import net.minecraft.world.gen.feature.WorldGenBigMushroom;
+import net.minecraft.world.gen.feature.WorldGenBigTree;
+import net.minecraft.world.gen.feature.WorldGenCanopyTree;
+import net.minecraft.world.gen.feature.WorldGenForest;
+import net.minecraft.world.gen.feature.WorldGenMegaJungle;
+import net.minecraft.world.gen.feature.WorldGenMegaPineTree;
+import net.minecraft.world.gen.feature.WorldGenSavannaTree;
+import net.minecraft.world.gen.feature.WorldGenShrub;
+import net.minecraft.world.gen.feature.WorldGenSwamp;
+import net.minecraft.world.gen.feature.WorldGenTaiga1;
+import net.minecraft.world.gen.feature.WorldGenTaiga2;
+import net.minecraft.world.gen.feature.WorldGenTrees;
+import net.minecraft.world.gen.feature.WorldGenerator;
 
 import javax.annotation.Nullable;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -67,6 +86,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class ForgeWorld extends AbstractWorld {
 
     private static final Logger logger = Logger.getLogger(ForgeWorld.class.getCanonicalName());
+    private static final Random random = new Random();
     private final WeakReference<World> worldRef;
 
     /**
@@ -112,6 +132,14 @@ public class ForgeWorld extends AbstractWorld {
     @Override
     public String getName() {
         return getWorld().getWorldInfo().getWorldName();
+    }
+
+    @Override
+    public boolean useItem(Vector position, BaseItem item, Direction face) {
+        Item nativeItem = Item.getItemById(item.getType());
+        ItemStack stack = new ItemStack(nativeItem, 1, item.getData());
+        World world = getWorld();
+        return stack.tryPlaceItemIntoWorld(new WorldEditFakePlayer((WorldServer) world), world, position.getBlockX(), position.getBlockY(), position.getBlockZ(), ForgeAdapter.adapt(face), 0, 0, 0);
     }
 
     @Override
@@ -310,9 +338,37 @@ public class ForgeWorld extends AbstractWorld {
         return false;
     }
 
+    @Nullable
+    private static WorldGenerator createWorldGenerator(TreeType type) {
+        switch (type) {
+            case TREE: return new WorldGenTrees(true);
+            case BIG_TREE: return new WorldGenBigTree(true);
+            case REDWOOD: return new WorldGenTaiga2(true);
+            case TALL_REDWOOD: return new WorldGenTaiga1();
+            case BIRCH: return new WorldGenForest(true, false);
+            case JUNGLE: return new WorldGenMegaJungle(true, 10, 20, 3, 3);
+            case SMALL_JUNGLE: return new WorldGenTrees(true, 4 + random.nextInt(7), 3, 3, false);
+            case SHORT_JUNGLE: return new WorldGenTrees(true, 4 + random.nextInt(7), 3, 3, true);
+            case JUNGLE_BUSH: return new WorldGenShrub(3, 0);
+            case RED_MUSHROOM: return new WorldGenBigMushroom(1);
+            case BROWN_MUSHROOM: return new WorldGenBigMushroom(0);
+            case SWAMP: return new WorldGenSwamp();
+            case ACACIA: return new WorldGenSavannaTree(true);
+            case DARK_OAK: return new WorldGenCanopyTree(true);
+            case MEGA_REDWOOD: return new WorldGenMegaPineTree(false, random.nextBoolean());
+            case TALL_BIRCH: return new WorldGenForest(true, true);
+            case RANDOM:
+            case PINE:
+            case RANDOM_REDWOOD:
+            default:
+                return null;
+        }
+    }
+
     @Override
     public boolean generateTree(TreeType type, EditSession editSession, Vector position) throws MaxChangedBlocksException {
-        return false;
+        WorldGenerator generator = createWorldGenerator(type);
+        return generator != null ? generator.generate(getWorld(), random, position.getBlockX(), position.getBlockY(), position.getBlockZ()) : false;
     }
 
     @Override
