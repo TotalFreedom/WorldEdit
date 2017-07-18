@@ -1,4 +1,4 @@
-package me.totalfreedom.worldedit;
+package me.StevenLawson.worldedit;
 
 import com.google.common.base.Function;
 import com.sk89q.worldedit.IncompleteRegionException;

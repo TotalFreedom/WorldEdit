@@ -17,29 +17,17 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.sk89q.worldedit.forge;
+package com.sk89q.worldedit.util;
 
-import com.sk89q.worldedit.util.PropertiesConfiguration;
+import javax.annotation.Nullable;
 
-import java.io.File;
+import static com.google.common.base.Preconditions.checkNotNull;
 
-public class ForgeConfiguration extends PropertiesConfiguration {
+public final class GuavaUtil {
 
-    public boolean creativeEnable = false;
-    public boolean cheatMode = false;
+    private GuavaUtil() {}
 
-    public ForgeConfiguration(ForgeWorldEdit mod) {
-        super(new File(mod.getWorkingDir() + File.separator + "worldedit.properties"));
-    }
-
-    @Override
-    protected void loadExtra() {
-        creativeEnable = getBool("use-in-creative", false);
-        cheatMode = getBool("cheat-mode", false);
-    }
-
-    @Override
-    public File getWorkingDirectory() {
-        return ForgeWorldEdit.inst.getWorkingDir();
+    public static <T> T firstNonNull(@Nullable T first, @Nullable T second) {
+        return first != null ? first : checkNotNull(second);
     }
 }

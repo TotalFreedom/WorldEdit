@@ -21,7 +21,7 @@ buildscript {
 
     configurations.all {
         resolutionStrategy {
-            force 'com.google.guava:guava:17.0'
+            force 'com.google.guava:guava:21.0'
         }
     }
 
@@ -34,7 +34,7 @@ buildscript {
 
 allprojects {
     group = 'com.sk89q.worldedit'
-    version = '6.1.7-TF'
+    version = '6.1.8-TF'
 }
 
 if (!project.hasProperty("artifactory_contextUrl")) ext.artifactory_contextUrl = "http://localhost"
@@ -80,7 +80,7 @@ artifactoryPublish.skip = true
 subprojects {
     apply plugin: 'java'
     apply plugin: 'maven'
-    //apply plugin: 'checkstyle'
+//    apply plugin: 'checkstyle'
     apply plugin: 'com.github.johnrengelman.shadow'
     apply plugin: 'com.jfrog.artifactory'
 
@@ -89,7 +89,7 @@ subprojects {
     sourceCompatibility = 1.7
     targetCompatibility = 1.7
 
-    //checkstyle.configFile = new File(rootProject.projectDir, "config/checkstyle/checkstyle.xml")
+//    checkstyle.configFile = new File(rootProject.projectDir, "config/checkstyle/checkstyle.xml")
 
     repositories {
         mavenCentral()

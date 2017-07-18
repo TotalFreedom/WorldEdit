@@ -1,22 +1,21 @@
 /*
- * WorldEdit, a Minecraft world manipulation toolkit
- * Copyright (C) sk89q <http://www.sk89q.com>
- * Copyright (C) WorldEdit team and contributors
- *
- * This program is free software: you can redistribute it and/or modify it
- * under the terms of the GNU Lesser General Public License as published by the
- * Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
- * for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- */
+ WorldEdit, a Minecraft world manipulation toolkit
+ Copyright (C) sk89q <http://www.sk89q.com>
+ Copyright (C) WorldEdit team and contributors
 
+ This program is free software: you can redistribute it and/or modify it
+ under the terms of the GNU Lesser General Public License as published by the
+ Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful, but WITHOUT
+ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ for more details.
+
+ You should have received a copy of the GNU Lesser General Public License
+ along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 package com.sk89q.worldedit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -54,9 +53,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
 /**
- * Stores session information.
+ Stores session information.
  */
-public class LocalSession {
+public class LocalSession
+{
 
     public transient static int MAX_HISTORY_SIZE = 15;
 
@@ -88,141 +88,162 @@ public class LocalSession {
     private RegionSelectorType defaultSelector;
 
     /**
-     * Construct the object.
-     *
-     * <p>{@link #setConfiguration(LocalConfiguration)} should be called
-     * later with configuration.</p>
+     Construct the object.
+
+     <p>
+     {@link #setConfiguration(LocalConfiguration)} should be called later with
+     configuration.</p>
      */
-    public LocalSession() {
+    public LocalSession()
+    {
     }
 
     /**
-     * Construct the object.
-     *
-     * @param config the configuration
+     Construct the object.
+
+     @param config the configuration
      */
-    public LocalSession(@Nullable LocalConfiguration config) {
+    public LocalSession(@Nullable LocalConfiguration config)
+    {
         this.config = config;
     }
 
     /**
-     * Set the configuration.
-     *
-     * @param config the configuration
+     Set the configuration.
+
+     @param config the configuration
      */
-    public void setConfiguration(LocalConfiguration config) {
+    public void setConfiguration(LocalConfiguration config)
+    {
         checkNotNull(config);
         this.config = config;
     }
 
     /**
-     * Called on post load of the session from persistent storage.
+     Called on post load of the session from persistent storage.
      */
-    public void postLoad() {
-        if (defaultSelector != null) {
+    public void postLoad()
+    {
+        if (defaultSelector != null)
+        {
             this.selector = defaultSelector.createSelector();
         }
     }
 
     /**
-     * Get whether this session is "dirty" and has changes that needs to
-     * be committed.
-     *
-     * @return true if dirty
+     Get whether this session is "dirty" and has changes that needs to be
+     committed.
+
+     @return true if dirty
      */
-    public boolean isDirty() {
+    public boolean isDirty()
+    {
         return dirty.get();
     }
 
     /**
-     * Set this session as dirty.
+     Set this session as dirty.
      */
-    private void setDirty() {
+    private void setDirty()
+    {
         dirty.set(true);
     }
 
     /**
-     * Get whether this session is "dirty" and has changes that needs to
-     * be committed, and reset it to {@code false}.
-     *
-     * @return true if the dirty value was {@code true}
+     Get whether this session is "dirty" and has changes that needs to be
+     committed, and reset it to {@code false}.
+
+     @return true if the dirty value was {@code true}
      */
-    public boolean compareAndResetDirty() {
+    public boolean compareAndResetDirty()
+    {
         return dirty.compareAndSet(true, false);
     }
 
     /**
-     * Get the session's timezone.
-     *
-     * @return the timezone
+     Get the session's timezone.
+
+     @return the timezone
      */
-    public TimeZone getTimeZone() {
+    public TimeZone getTimeZone()
+    {
         return timezone;
     }
 
     /**
-     * Set the session's timezone.
-     *
-     * @param timezone the user's timezone
+     Set the session's timezone.
+
+     @param timezone the user's timezone
      */
-    public void setTimezone(TimeZone timezone) {
+    public void setTimezone(TimeZone timezone)
+    {
         checkNotNull(timezone);
         this.timezone = timezone;
     }
 
     /**
-     * Clear history.
+     Clear history.
      */
-    public void clearHistory() {
+    public void clearHistory()
+    {
         history.clear();
         historyPointer = 0;
     }
 
     /**
-     * Remember an edit session for the undo history. If the history maximum
-     * size is reached, old edit sessions will be discarded.
-     *
-     * @param editSession the edit session
+     Remember an edit session for the undo history. If the history maximum size
+     is reached, old edit sessions will be discarded.
+
+     @param editSession the edit session
      */
-    public void remember(EditSession editSession) {
+    public void remember(EditSession editSession)
+    {
         checkNotNull(editSession);
 
         // Don't store anything if no changes were made
-        if (editSession.size() == 0) return;
+        if (editSession.size() == 0)
+        {
+            return;
+        }
 
         // Destroy any sessions after this undo point
-        while (historyPointer < history.size()) {
+        while (historyPointer < history.size())
+        {
             history.remove(historyPointer);
         }
         history.add(editSession);
-        while (history.size() > MAX_HISTORY_SIZE) {
+        while (history.size() > MAX_HISTORY_SIZE)
+        {
             history.remove(0);
         }
         historyPointer = history.size();
     }
 
     /**
-     * Performs an undo.
-     *
-     * @param newBlockBag a new block bag
-     * @param player the player
-     * @return whether anything was undone
+     Performs an undo.
+
+     @param newBlockBag a new block bag
+     @param player the player
+     @return whether anything was undone
      */
-    public EditSession undo(@Nullable BlockBag newBlockBag, LocalPlayer player) {
+    public EditSession undo(@Nullable BlockBag newBlockBag, LocalPlayer player)
+    {
         return undo(newBlockBag, (Player) player);
     }
 
     /**
-     * Performs an undo.
-     *
-     * @param newBlockBag a new block bag
-     * @param player the player
-     * @return whether anything was undone
+     Performs an undo.
+
+     @param newBlockBag a new block bag
+     @param player the player
+     @return whether anything was undone
      */
-    public EditSession undo(@Nullable BlockBag newBlockBag, Player player) {
+    public EditSession undo(@Nullable BlockBag newBlockBag, Player player)
+    {
         checkNotNull(player);
         --historyPointer;
-        if (historyPointer >= 0) {
+        if (historyPointer >= 0)
+        {
             EditSession editSession = history.get(historyPointer);
             EditSession newEditSession = WorldEdit.getInstance().getEditSessionFactory()
                     .getEditSession(editSession.getWorld(), -1, newBlockBag, player);
@@ -230,33 +251,38 @@ public class LocalSession {
             newEditSession.setFastMode(fastMode);
             editSession.undo(newEditSession);
             return editSession;
-        } else {
+        }
+        else
+        {
             historyPointer = 0;
             return null;
         }
     }
 
     /**
-     * Performs a redo
-     *
-     * @param newBlockBag a new block bag
-     * @param player the player
-     * @return whether anything was redone
+     Performs a redo
+
+     @param newBlockBag a new block bag
+     @param player the player
+     @return whether anything was redone
      */
-    public EditSession redo(@Nullable BlockBag newBlockBag, LocalPlayer player) {
+    public EditSession redo(@Nullable BlockBag newBlockBag, LocalPlayer player)
+    {
         return redo(newBlockBag, (Player) player);
     }
 
     /**
-     * Performs a redo
-     *
-     * @param newBlockBag a new block bag
-     * @param player the player
-     * @return whether anything was redone
+     Performs a redo
+
+     @param newBlockBag a new block bag
+     @param player the player
+     @return whether anything was redone
      */
-    public EditSession redo(@Nullable BlockBag newBlockBag, Player player) {
+    public EditSession redo(@Nullable BlockBag newBlockBag, Player player)
+    {
         checkNotNull(player);
-        if (historyPointer < history.size()) {
+        if (historyPointer < history.size())
+        {
             EditSession editSession = history.get(historyPointer);
             EditSession newEditSession = WorldEdit.getInstance().getEditSessionFactory()
                     .getEditSession(editSession.getWorld(), -1, newBlockBag, player);
@@ -271,43 +297,48 @@ public class LocalSession {
     }
 
     /**
-     * Get the default region selector.
-     *
-     * @return the default region selector
+     Get the default region selector.
+
+     @return the default region selector
      */
-    public RegionSelectorType getDefaultRegionSelector() {
+    public RegionSelectorType getDefaultRegionSelector()
+    {
         return defaultSelector;
     }
 
     /**
-     * Set the default region selector.
-     *
-     * @param defaultSelector the default region selector
+     Set the default region selector.
+
+     @param defaultSelector the default region selector
      */
-    public void setDefaultRegionSelector(RegionSelectorType defaultSelector) {
+    public void setDefaultRegionSelector(RegionSelectorType defaultSelector)
+    {
         checkNotNull(defaultSelector);
         this.defaultSelector = defaultSelector;
         setDirty();
     }
 
     /**
-     * @deprecated Use {@link #getRegionSelector(World)}
+     @deprecated Use {@link #getRegionSelector(World)}
      */
     @Deprecated
-    public RegionSelector getRegionSelector(LocalWorld world) {
+    public RegionSelector getRegionSelector(LocalWorld world)
+    {
         return getRegionSelector((World) world);
     }
 
     /**
-     * Get the region selector for defining the selection. If the selection
-     * was defined for a different world, the old selection will be discarded.
-     *
-     * @param world the world
-     * @return position the position
+     Get the region selector for defining the selection. If the selection was
+     defined for a different world, the old selection will be discarded.
+
+     @param world the world
+     @return position the position
      */
-    public RegionSelector getRegionSelector(World world) {
+    public RegionSelector getRegionSelector(World world)
+    {
         checkNotNull(world);
-        if (selector.getWorld() == null || !selector.getWorld().equals(world)) {
+        if (selector.getWorld() == null || !selector.getWorld().equals(world))
+        {
             selector.setWorld(world);
             selector.clear();
         }
@@ -315,28 +346,31 @@ public class LocalSession {
     }
 
     /**
-     * @deprecated use {@link #getRegionSelector(World)}
+     @deprecated use {@link #getRegionSelector(World)}
      */
     @Deprecated
-    public RegionSelector getRegionSelector() {
+    public RegionSelector getRegionSelector()
+    {
         return selector;
     }
 
     /**
-     * @deprecated use {@link #setRegionSelector(World, RegionSelector)}
+     @deprecated use {@link #setRegionSelector(World, RegionSelector)}
      */
     @Deprecated
-    public void setRegionSelector(LocalWorld world, RegionSelector selector) {
+    public void setRegionSelector(LocalWorld world, RegionSelector selector)
+    {
         setRegionSelector((World) world, selector);
     }
 
     /**
-     * Set the region selector.
-     *
-     * @param world the world
-     * @param selector the selector
+     Set the region selector.
+
+     @param world the world
+     @param selector the selector
      */
-    public void setRegionSelector(World world, RegionSelector selector) {
+    public void setRegionSelector(World world, RegionSelector selector)
+    {
         checkNotNull(world);
         checkNotNull(selector);
         selector.setWorld(world);
@@ -344,184 +378,206 @@ public class LocalSession {
     }
 
     /**
-     * Returns true if the region is fully defined.
-     *
-     * @return true if a region selection is defined
+     Returns true if the region is fully defined.
+
+     @return true if a region selection is defined
      */
     @Deprecated
-    public boolean isRegionDefined() {
+    public boolean isRegionDefined()
+    {
         return selector.isDefined();
     }
 
     /**
-     * @deprecated use {@link #isSelectionDefined(World)}
+     @deprecated use {@link #isSelectionDefined(World)}
      */
     @Deprecated
-    public boolean isSelectionDefined(LocalWorld world) {
+    public boolean isSelectionDefined(LocalWorld world)
+    {
         return isSelectionDefined((World) world);
     }
 
     /**
-     * Returns true if the region is fully defined for the specified world.
-     *
-     * @param world the world
-     * @return true if a region selection is defined
+     Returns true if the region is fully defined for the specified world.
+
+     @param world the world
+     @return true if a region selection is defined
      */
-    public boolean isSelectionDefined(World world) {
+    public boolean isSelectionDefined(World world)
+    {
         checkNotNull(world);
-        if (selector.getIncompleteRegion().getWorld() == null || !selector.getIncompleteRegion().getWorld().equals(world)) {
+        if (selector.getIncompleteRegion().getWorld() == null || !selector.getIncompleteRegion().getWorld().equals(world))
+        {
             return false;
         }
         return selector.isDefined();
     }
 
     /**
-     * @deprecated use {@link #getSelection(World)}
+     @deprecated use {@link #getSelection(World)}
      */
     @Deprecated
-    public Region getRegion() throws IncompleteRegionException {
+    public Region getRegion() throws IncompleteRegionException
+    {
         return selector.getRegion();
     }
 
     /**
-     * @deprecated use {@link #getSelection(World)}
+     @deprecated use {@link #getSelection(World)}
      */
     @Deprecated
-    public Region getSelection(LocalWorld world) throws IncompleteRegionException {
+    public Region getSelection(LocalWorld world) throws IncompleteRegionException
+    {
         return getSelection((World) world);
     }
 
     /**
-     * Get the selection region. If you change the region, you should
-     * call learnRegionChanges().  If the selection is defined in
-     * a different world, the {@code IncompleteRegionException}
-     * exception will be thrown.
-     *
-     * @param world the world
-     * @return a region
-     * @throws IncompleteRegionException if no region is selected
+     Get the selection region. If you change the region, you should call
+     learnRegionChanges(). If the selection is defined in a different world, the
+     {@code IncompleteRegionException} exception will be thrown.
+
+     @param world the world
+     @return a region
+     @throws IncompleteRegionException if no region is selected
      */
-    public Region getSelection(World world) throws IncompleteRegionException {
+    public Region getSelection(World world) throws IncompleteRegionException
+    {
         checkNotNull(world);
-        if (selector.getIncompleteRegion().getWorld() == null || !selector.getIncompleteRegion().getWorld().equals(world)) {
+        if (selector.getIncompleteRegion().getWorld() == null || !selector.getIncompleteRegion().getWorld().equals(world))
+        {
             throw new IncompleteRegionException();
         }
         return selector.getRegion();
     }
 
     /**
-     * Get the selection world.
-     *
-     * @return the the world of the selection
+     Get the selection world.
+
+     @return the the world of the selection
      */
-    public World getSelectionWorld() {
+    public World getSelectionWorld()
+    {
         return selector.getIncompleteRegion().getWorld();
     }
 
     /**
-     * Gets the clipboard.
-     *
-     * @return clipboard
-     * @throws EmptyClipboardException thrown if no clipboard is set
+     Gets the clipboard.
+
+     @return clipboard
+     @throws EmptyClipboardException thrown if no clipboard is set
      */
-    public ClipboardHolder getClipboard() throws EmptyClipboardException {
-        if (clipboard == null) {
+    public ClipboardHolder getClipboard() throws EmptyClipboardException
+    {
+        if (clipboard == null)
+        {
             throw new EmptyClipboardException();
         }
         return clipboard;
     }
 
     /**
-     * Sets the clipboard.
-     *
-     * <p>Pass {@code null} to clear the clipboard.</p>
-     *
-     * @param clipboard the clipboard, or null if the clipboard is to be cleared
+     Sets the clipboard.
+
+     <p>
+     Pass {@code null} to clear the clipboard.</p>
+
+     @param clipboard the clipboard, or null if the clipboard is to be cleared
      */
-    public void setClipboard(@Nullable ClipboardHolder clipboard) {
+    public void setClipboard(@Nullable ClipboardHolder clipboard)
+    {
         this.clipboard = clipboard;
     }
 
     /**
-     * See if tool control is enabled.
-     *
-     * @return true if enabled
+     See if tool control is enabled.
+
+     @return true if enabled
      */
-    public boolean isToolControlEnabled() {
+    public boolean isToolControlEnabled()
+    {
         return toolControl;
     }
 
     /**
-     * Change tool control setting.
-     *
-     * @param toolControl true to enable tool control
+     Change tool control setting.
+
+     @param toolControl true to enable tool control
      */
-    public void setToolControl(boolean toolControl) {
+    public void setToolControl(boolean toolControl)
+    {
         this.toolControl = toolControl;
     }
 
     /**
-     * Get the maximum number of blocks that can be changed in an edit session.
-     *
-     * @return block change limit
+     Get the maximum number of blocks that can be changed in an edit session.
+
+     @return block change limit
      */
-    public int getBlockChangeLimit() {
+    public int getBlockChangeLimit()
+    {
         return maxBlocksChanged;
     }
 
     /**
-     * Set the maximum number of blocks that can be changed.
-     *
-     * @param maxBlocksChanged the maximum number of blocks changed
+     Set the maximum number of blocks that can be changed.
+
+     @param maxBlocksChanged the maximum number of blocks changed
      */
-    public void setBlockChangeLimit(int maxBlocksChanged) {
+    public void setBlockChangeLimit(int maxBlocksChanged)
+    {
         this.maxBlocksChanged = maxBlocksChanged;
     }
 
     /**
-     * Checks whether the super pick axe is enabled.
-     *
-     * @return status
+     Checks whether the super pick axe is enabled.
+
+     @return status
      */
-    public boolean hasSuperPickAxe() {
+    public boolean hasSuperPickAxe()
+    {
         return superPickaxe;
     }
 
     /**
-     * Enable super pick axe.
+     Enable super pick axe.
      */
-    public void enableSuperPickAxe() {
+    public void enableSuperPickAxe()
+    {
         superPickaxe = true;
     }
 
     /**
-     * Disable super pick axe.
+     Disable super pick axe.
      */
-    public void disableSuperPickAxe() {
+    public void disableSuperPickAxe()
+    {
         superPickaxe = false;
     }
 
     /**
-     * Toggle the super pick axe.
-     *
-     * @return whether the super pick axe is now enabled
+     Toggle the super pick axe.
+
+     @return whether the super pick axe is now enabled
      */
-    public boolean toggleSuperPickAxe() {
+    public boolean toggleSuperPickAxe()
+    {
         superPickaxe = !superPickaxe;
         return superPickaxe;
     }
 
     /**
-     * Get the position use for commands that take a center point
-     * (i.e. //forestgen, etc.).
-     *
-     * @param player the player
-     * @return the position to use
-     * @throws IncompleteRegionException thrown if a region is not fully selected
+     Get the position use for commands that take a center point (i.e.
+     //forestgen, etc.).
+
+     @param player the player
+     @return the position to use
+     @throws IncompleteRegionException thrown if a region is not fully selected
      */
-    public Vector getPlacementPosition(Player player) throws IncompleteRegionException {
+    public Vector getPlacementPosition(Player player) throws IncompleteRegionException
+    {
         checkNotNull(player);
-        if (!placeAtPos1) {
+        if (!placeAtPos1)
+        {
             return player.getBlockIn();
         }
 
@@ -529,92 +585,101 @@ public class LocalSession {
     }
 
     /**
-     * Toggle placement position.
-     *
-     * @return whether "place at position 1" is now enabled
+     Toggle placement position.
+
+     @return whether "place at position 1" is now enabled
      */
-    public boolean togglePlacementPosition() {
+    public boolean togglePlacementPosition()
+    {
         placeAtPos1 = !placeAtPos1;
         return placeAtPos1;
     }
 
     /**
-     * Get a block bag for a player.
-     *
-     * @param player the player to get the block bag for
-     * @return a block bag
+     Get a block bag for a player.
+
+     @param player the player to get the block bag for
+     @return a block bag
      */
     @Nullable
-    public BlockBag getBlockBag(Player player) {
+    public BlockBag getBlockBag(Player player)
+    {
         checkNotNull(player);
-        if (!useInventory) {
+        if (!useInventory)
+        {
             return null;
         }
         return player.getInventoryBlockBag();
     }
 
     /**
-     * Get the snapshot that has been selected.
-     *
-     * @return the snapshot
+     Get the snapshot that has been selected.
+
+     @return the snapshot
      */
     @Nullable
-    public Snapshot getSnapshot() {
+    public Snapshot getSnapshot()
+    {
         return snapshot;
     }
 
     /**
-     * Select a snapshot.
-     *
-     * @param snapshot a snapshot
+     Select a snapshot.
+
+     @param snapshot a snapshot
      */
-    public void setSnapshot(@Nullable Snapshot snapshot) {
+    public void setSnapshot(@Nullable Snapshot snapshot)
+    {
         this.snapshot = snapshot;
     }
 
     /**
-     * Get the assigned block tool.
-     *
-     * @return the super pickaxe tool mode
+     Get the assigned block tool.
+
+     @return the super pickaxe tool mode
      */
-    public BlockTool getSuperPickaxe() {
+    public BlockTool getSuperPickaxe()
+    {
         return pickaxeMode;
     }
 
     /**
-     * Set the super pick axe tool.
-     *
-     * @param tool the tool to set
+     Set the super pick axe tool.
+
+     @param tool the tool to set
      */
-    public void setSuperPickaxe(BlockTool tool) {
+    public void setSuperPickaxe(BlockTool tool)
+    {
         checkNotNull(tool);
         this.pickaxeMode = tool;
     }
 
     /**
-     * Get the tool assigned to the item.
-     *
-     * @param item the item type ID
-     * @return the tool, which may be {@link null}
+     Get the tool assigned to the item.
+
+     @param item the item type ID
+     @return the tool, which may be {@link null}
      */
     @Nullable
-    public Tool getTool(int item) {
+    public Tool getTool(int item)
+    {
         return tools.get(item);
     }
 
     /**
-     * Get the brush tool assigned to the item. If there is no tool assigned
-     * or the tool is not assigned, the slot will be replaced with the
-     * brush tool.
-     *
-     * @param item the item type ID
-     * @return the tool, or {@code null}
-     * @throws InvalidToolBindException if the item can't be bound to that item
+     Get the brush tool assigned to the item. If there is no tool assigned or
+     the tool is not assigned, the slot will be replaced with the brush tool.
+
+     @param item the item type ID
+     @return the tool, or {@code null}
+     @throws InvalidToolBindException if the item can't be bound to that item
      */
-    public BrushTool getBrushTool(int item) throws InvalidToolBindException {
+    public BrushTool getBrushTool(int item) throws InvalidToolBindException
+    {
         Tool tool = getTool(item);
 
-        if (tool == null || !(tool instanceof BrushTool)) {
+        if (tool == null || !(tool instanceof BrushTool))
+        {
             tool = new BrushTool("worldedit.brush.sphere");
             setTool(item, tool);
         }
@@ -623,18 +688,24 @@ public class LocalSession {
     }
 
     /**
-     * Set the tool.
-     *
-     * @param item the item type ID
-     * @param tool the tool to set, which can be {@code null}
-     * @throws InvalidToolBindException if the item can't be bound to that item
+     Set the tool.
+
+     @param item the item type ID
+     @param tool the tool to set, which can be {@code null}
+     @throws InvalidToolBindException if the item can't be bound to that item
      */
-    public void setTool(int item, @Nullable Tool tool) throws InvalidToolBindException {
-        if (item > 0 && item < 255) {
+    public void setTool(int item, @Nullable Tool tool) throws InvalidToolBindException
+    {
+        if (item > 0 && item < 255)
+        {
             throw new InvalidToolBindException(item, "Blocks can't be used");
-        } else if (item == config.wandItem) {
+        }
+        else if (item == config.wandItem)
+        {
             throw new InvalidToolBindException(item, "Already used for the wand");
-        } else if (item == config.navigationWand) {
+        }
+        else if (item == config.navigationWand)
+        {
             throw new InvalidToolBindException(item, "Already used for the navigation wand");
         }
 
@@ -642,100 +713,115 @@ public class LocalSession {
     }
 
     /**
-     * Returns whether inventory usage is enabled for this session.
-     *
-     * @return if inventory is being used
+     Returns whether inventory usage is enabled for this session.
+
+     @return if inventory is being used
      */
-    public boolean isUsingInventory() {
+    public boolean isUsingInventory()
+    {
         return useInventory;
     }
 
     /**
-     * Set the state of inventory usage.
-     *
-     * @param useInventory if inventory is to be used
+     Set the state of inventory usage.
+
+     @param useInventory if inventory is to be used
      */
-    public void setUseInventory(boolean useInventory) {
+    public void setUseInventory(boolean useInventory)
+    {
         this.useInventory = useInventory;
     }
 
     /**
-     * Get the last script used.
-     *
-     * @return the last script's name
+     Get the last script used.
+
+     @return the last script's name
      */
     @Nullable
-    public String getLastScript() {
+    public String getLastScript()
+    {
         return lastScript;
     }
 
     /**
-     * Set the last script used.
-     *
-     * @param lastScript the last script's name
+     Set the last script used.
+
+     @param lastScript the last script's name
      */
-    public void setLastScript(@Nullable String lastScript) {
+    public void setLastScript(@Nullable String lastScript)
+    {
         this.lastScript = lastScript;
         setDirty();
     }
 
     /**
-     * Tell the player the WorldEdit version.
-     *
-     * @param player the player
+     Tell the player the WorldEdit version.
+
+     @param player the player
      */
-    public void tellVersion(Actor player) {
+    public void tellVersion(Actor player)
+    {
     }
 
     /**
-     * Dispatch a CUI event but only if the actor has CUI support.
-     *
-     * @param actor the actor
-     * @param event the event
+     Dispatch a CUI event but only if the actor has CUI support.
+
+     @param actor the actor
+     @param event the event
      */
-    public void dispatchCUIEvent(Actor actor, CUIEvent event) {
+    public void dispatchCUIEvent(Actor actor, CUIEvent event)
+    {
         checkNotNull(actor);
         checkNotNull(event);
 
-        if (hasCUISupport) {
+        if (hasCUISupport)
+        {
             actor.dispatchCUIEvent(event);
         }
-
-        if (actor instanceof com.sk89q.worldedit.entity.Player) {
-            me.totalfreedom.worldedit.WorldEditHandler.selectionChanged((com.sk89q.worldedit.entity.Player) actor);
+        if (actor instanceof com.sk89q.worldedit.entity.Player)
+        {
+            me.StevenLawson.worldedit.WorldEditHandler.selectionChanged((com.sk89q.worldedit.entity.Player) actor);
         }
     }
 
     /**
-     * Dispatch the initial setup CUI messages.
-     *
-     * @param actor the actor
+     Dispatch the initial setup CUI messages.
+
+     @param actor the actor
      */
-    public void dispatchCUISetup(Actor actor) {
-        if (selector != null) {
+    public void dispatchCUISetup(Actor actor)
+    {
+        if (selector != null)
+        {
             dispatchCUISelection(actor);
         }
     }
 
     /**
-     * Send the selection information.
-     *
-     * @param actor the actor
+     Send the selection information.
+
+     @param actor the actor
      */
-    public void dispatchCUISelection(Actor actor) {
+    public void dispatchCUISelection(Actor actor)
+    {
         checkNotNull(actor);
 
-        if (!hasCUISupport) {
+        if (!hasCUISupport)
+        {
             return;
         }
 
-        if (selector instanceof CUIRegion) {
+        if (selector instanceof CUIRegion)
+        {
             CUIRegion tempSel = (CUIRegion) selector;
 
-            if (tempSel.getProtocolVersion() > cuiVersion) {
+            if (tempSel.getProtocolVersion() > cuiVersion)
+            {
                 actor.dispatchCUIEvent(new SelectionShapeEvent(tempSel.getLegacyTypeID()));
                 tempSel.describeLegacyCUI(this, actor);
-            } else {
+            }
+            else
+            {
                 actor.dispatchCUIEvent(new SelectionShapeEvent(tempSel.getTypeID()));
                 tempSel.describeCUI(this, actor);
             }
@@ -744,23 +830,29 @@ public class LocalSession {
     }
 
     /**
-     * Describe the selection to the CUI actor.
-     *
-     * @param actor the actor
+     Describe the selection to the CUI actor.
+
+     @param actor the actor
      */
-    public void describeCUI(Actor actor) {
+    public void describeCUI(Actor actor)
+    {
         checkNotNull(actor);
 
-        if (!hasCUISupport) {
+        if (!hasCUISupport)
+        {
             return;
         }
 
-        if (selector instanceof CUIRegion) {
+        if (selector instanceof CUIRegion)
+        {
             CUIRegion tempSel = (CUIRegion) selector;
 
-            if (tempSel.getProtocolVersion() > cuiVersion) {
+            if (tempSel.getProtocolVersion() > cuiVersion)
+            {
                 tempSel.describeLegacyCUI(this, actor);
-            } else {
+            }
+            else
+            {
                 tempSel.describeCUI(this, actor);
             }
 
@@ -768,97 +860,112 @@ public class LocalSession {
     }
 
     /**
-     * Handle a CUI initialization message.
-     *
-     * @param text the message
+     Handle a CUI initialization message.
+
+     @param text the message
      */
-    public void handleCUIInitializationMessage(String text) {
+    public void handleCUIInitializationMessage(String text)
+    {
         checkNotNull(text);
 
         String[] split = text.split("\\|");
-        if (split.length > 1 && split[0].equalsIgnoreCase("v")) { // enough fields and right message
+        if (split.length > 1 && split[0].equalsIgnoreCase("v"))
+        { // enough fields and right message
             setCUISupport(true);
-            try {
+            try
+            {
                 setCUIVersion(Integer.parseInt(split[1]));
-            } catch (NumberFormatException e) {
+            }
+            catch (NumberFormatException e)
+            {
                 WorldEdit.logger.warning("Error while reading CUI init message: " + e.getMessage());
             }
         }
     }
 
     /**
-     * Gets the status of CUI support.
-     *
-     * @return true if CUI is enabled
+     Gets the status of CUI support.
+
+     @return true if CUI is enabled
      */
-    public boolean hasCUISupport() {
+    public boolean hasCUISupport()
+    {
         return hasCUISupport;
     }
 
     /**
-     * Sets the status of CUI support.
-     *
-     * @param support true if CUI is enabled
+     Sets the status of CUI support.
+
+     @param support true if CUI is enabled
      */
-    public void setCUISupport(boolean support) {
+    public void setCUISupport(boolean support)
+    {
         hasCUISupport = support;
     }
 
     /**
-     * Gets the client's CUI protocol version
-     *
-     * @return the CUI version
+     Gets the client's CUI protocol version
+
+     @return the CUI version
      */
-    public int getCUIVersion() {
+    public int getCUIVersion()
+    {
         return cuiVersion;
     }
 
     /**
-     * Sets the client's CUI protocol version
-     *
-     * @param cuiVersion the CUI version
+     Sets the client's CUI protocol version
+
+     @param cuiVersion the CUI version
      */
-    public void setCUIVersion(int cuiVersion) {
+    public void setCUIVersion(int cuiVersion)
+    {
         this.cuiVersion = cuiVersion;
     }
 
     /**
-     * Detect date from a user's input.
-     *
-     * @param input the input to parse
-     * @return a date
+     Detect date from a user's input.
+
+     @param input the input to parse
+     @return a date
      */
     @Nullable
-    public Calendar detectDate(String input) {
+    public Calendar detectDate(String input)
+    {
         checkNotNull(input);
 
         Time.setTimeZone(getTimeZone());
         Options opt = new com.sk89q.jchronic.Options();
         opt.setNow(Calendar.getInstance(getTimeZone()));
         Span date = Chronic.parse(input, opt);
-        if (date == null) {
+        if (date == null)
+        {
             return null;
-        } else {
+        }
+        else
+        {
             return date.getBeginCalendar();
         }
     }
 
     /**
-     * @deprecated use {@link #createEditSession(Player)}
+     @deprecated use {@link #createEditSession(Player)}
      */
     @Deprecated
-    public EditSession createEditSession(LocalPlayer player) {
+    public EditSession createEditSession(LocalPlayer player)
+    {
         return createEditSession((Player) player);
     }
 
     /**
-     * Construct a new edit session.
-     *
-     * @param player the player
-     * @return an edit session
+     Construct a new edit session.
+
+     @param player the player
+     @return an edit session
      */
     @SuppressWarnings("deprecation")
-    public EditSession createEditSession(Player player) {
+    public EditSession createEditSession(Player player)
+    {
         checkNotNull(player);
 
         BlockBag blockBag = getBlockBag(player);
@@ -875,48 +982,53 @@ public class LocalSession {
     }
 
     /**
-     * Checks if the session has fast mode enabled.
-     *
-     * @return true if fast mode is enabled
+     Checks if the session has fast mode enabled.
+
+     @return true if fast mode is enabled
      */
-    public boolean hasFastMode() {
+    public boolean hasFastMode()
+    {
         return fastMode;
     }
 
     /**
-     * Set fast mode.
-     *
-     * @param fastMode true if fast mode is enabled
+     Set fast mode.
+
+     @param fastMode true if fast mode is enabled
      */
-    public void setFastMode(boolean fastMode) {
+    public void setFastMode(boolean fastMode)
+    {
         this.fastMode = fastMode;
     }
 
     /**
-     * Get the mask.
-     *
-     * @return mask, may be null
+     Get the mask.
+
+     @return mask, may be null
      */
-    public Mask getMask() {
+    public Mask getMask()
+    {
         return mask;
     }
 
     /**
-     * Set a mask.
-     *
-     * @param mask mask or null
+     Set a mask.
+
+     @param mask mask or null
      */
-    public void setMask(Mask mask) {
+    public void setMask(Mask mask)
+    {
         this.mask = mask;
     }
 
     /**
-     * Set a mask.
-     *
-     * @param mask mask or null
+     Set a mask.
+
+     @param mask mask or null
      */
     @SuppressWarnings("deprecation")
-    public void setMask(com.sk89q.worldedit.masks.Mask mask) {
+    public void setMask(com.sk89q.worldedit.masks.Mask mask)
+    {
         setMask(mask != null ? Masks.wrap(mask) : null);
     }
 
