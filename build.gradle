@@ -95,12 +95,8 @@ subprojects {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
 
-<<<<<<< HEAD
-    //checkstyle.configFile = new File(rootProject.projectDir, "config/checkstyle/checkstyle.xml")
-=======
     checkstyle.configFile = new File(rootProject.projectDir, "config/checkstyle/checkstyle.xml")
     checkstyle.toolVersion = '7.6.1'
->>>>>>> 815f14d4a165418de486333d4721e3f1271f2480
 
     repositories {
         mavenCentral()
