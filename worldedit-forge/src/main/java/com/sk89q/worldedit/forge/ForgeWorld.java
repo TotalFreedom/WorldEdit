@@ -19,35 +19,47 @@
 
 package com.sk89q.worldedit.forge;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.io.Files;
 import com.sk89q.jnbt.CompoundTag;
 import com.sk89q.worldedit.BlockVector;
+import com.sk89q.worldedit.BlockVector2D;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.MaxChangedBlocksException;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
 import com.sk89q.worldedit.WorldEditException;
-import com.sk89q.worldedit.blocks.BaseBlock;
 import com.sk89q.worldedit.blocks.BaseItem;
 import com.sk89q.worldedit.blocks.BaseItemStack;
-import com.sk89q.worldedit.blocks.LazyBlock;
 import com.sk89q.worldedit.entity.BaseEntity;
 import com.sk89q.worldedit.entity.Entity;
 import com.sk89q.worldedit.internal.Constants;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.Region;
+import com.sk89q.worldedit.registry.state.Property;
 import com.sk89q.worldedit.util.Direction;
 import com.sk89q.worldedit.util.Location;
 import com.sk89q.worldedit.util.TreeGenerator.TreeType;
 import com.sk89q.worldedit.world.AbstractWorld;
 import com.sk89q.worldedit.world.biome.BaseBiome;
-import com.sk89q.worldedit.world.registry.WorldData;
+import com.sk89q.worldedit.world.block.BaseBlock;
+import com.sk89q.worldedit.world.block.BlockState;
+import com.sk89q.worldedit.world.block.BlockStateHolder;
+import com.sk89q.worldedit.world.block.BlockType;
+import com.sk89q.worldedit.world.item.ItemTypes;
+import com.sk89q.worldedit.world.weather.WeatherType;
+import com.sk89q.worldedit.world.weather.WeatherTypes;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockLeaves;
 import net.minecraft.block.BlockOldLeaf;
 import net.minecraft.block.BlockOldLog;
 import net.minecraft.block.BlockPlanks;
+import net.minecraft.block.properties.IProperty;
+import net.minecraft.block.properties.PropertyDirection;
+import net.minecraft.block.properties.PropertyEnum;
+import net.minecraft.block.state.BlockStateContainer;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.item.EntityItem;
@@ -59,7 +71,9 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumActionResult;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
+import net.minecraft.util.IStringSerializable;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -82,17 +96,19 @@ import net.minecraft.world.gen.feature.WorldGenTaiga1;
 import net.minecraft.world.gen.feature.WorldGenTaiga2;
 import net.minecraft.world.gen.feature.WorldGenTrees;
 import net.minecraft.world.gen.feature.WorldGenerator;
+import net.minecraft.world.storage.WorldInfo;
 import net.minecraftforge.common.DimensionManager;
-
-import javax.annotation.Nullable;
 
 import java.io.File;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.TreeMap;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import javax.annotation.Nullable;
 
 /**
  * An adapter to Minecraft worlds for WorldEdit.
@@ -115,7 +131,7 @@ public class ForgeWorld extends AbstractWorld {
      */
     ForgeWorld(World world) {
         checkNotNull(world);
-        this.worldRef = new WeakReference<World>(world);
+        this.worldRef = new WeakReference<>(world);
     }
 
     /**
@@ -154,7 +170,7 @@ public class ForgeWorld extends AbstractWorld {
     }
 
     @Override
-    public boolean setBlock(Vector position, BaseBlock block, boolean notifyAndLight) throws WorldEditException {
+    public boolean setBlock(Vector position, BlockStateHolder block, boolean notifyAndLight) throws WorldEditException {
         checkNotNull(position);
         checkNotNull(block);
 
@@ -167,18 +183,21 @@ public class ForgeWorld extends AbstractWorld {
         Chunk chunk = world.getChunkFromChunkCoords(x >> 4, z >> 4);
         BlockPos pos = new BlockPos(x, y, z);
         IBlockState old = chunk.getBlockState(pos);
-        @SuppressWarnings("deprecation")
-        IBlockState newState = Block.getBlockById(block.getId()).getStateFromMeta(block.getData());
+        Block mcBlock = Block.getBlockFromName(block.getBlockType().getId());
+        IBlockState newState = mcBlock.getDefaultState();
+        @SuppressWarnings("unchecked")
+        Map<Property<?>, Object> states = block.getStates();
+        newState = applyProperties(mcBlock.getBlockState(), newState, states);
         IBlockState successState = chunk.setBlockState(pos, newState);
         boolean successful = successState != null;
 
         // Create the TileEntity
         if (successful) {
-            if (block.hasNbtData()) {
+            if (block instanceof BaseBlock && ((BaseBlock) block).hasNbtData()) {
                 // Kill the old TileEntity
                 world.removeTileEntity(pos);
-                NBTTagCompound nativeTag = NBTConverter.toNative(block.getNbtData());
-                nativeTag.setString("id", block.getNbtId());
+                NBTTagCompound nativeTag = NBTConverter.toNative(((BaseBlock) block).getNbtData());
+                nativeTag.setString("id", ((BaseBlock) block).getNbtId());
                 TileEntityUtils.setTileEntity(world, position, nativeTag);
             }
         }
@@ -192,6 +211,29 @@ public class ForgeWorld extends AbstractWorld {
         }
 
         return successful;
+    }
+
+    // Can't get the "Object" to be right for withProperty w/o this
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private IBlockState applyProperties(BlockStateContainer stateContainer, IBlockState newState, Map<Property<?>, Object> states) {
+        for (Map.Entry<Property<?>, Object> state : states.entrySet()) {
+
+            IProperty property = stateContainer.getProperty(state.getKey().getName());
+            Comparable value = (Comparable) state.getValue();
+            // we may need to adapt this value, depending on the source prop
+            if (property instanceof PropertyDirection) {
+                Direction dir = (Direction) value;
+                value = ForgeAdapter.adapt(dir);
+            } else if (property instanceof PropertyEnum) {
+                String enumName = (String) value;
+                value = ((PropertyEnum<?>) property).parseValue((String) value).or(() -> {
+                    throw new IllegalStateException("Enum property " + property.getName() + " does not contain " + enumName);
+                });
+            }
+
+            newState = newState.withProperty(property, value);
+        }
+        return newState;
     }
 
     @Override
@@ -227,7 +269,7 @@ public class ForgeWorld extends AbstractWorld {
         checkNotNull(biome);
 
         Chunk chunk = getWorld().getChunkFromBlockCoords(new BlockPos(position.getBlockX(), 0, position.getBlockZ()));
-        if ((chunk != null) && (chunk.isLoaded())) {
+        if (chunk.isLoaded()) {
             chunk.getBiomeArray()[((position.getBlockZ() & 0xF) << 4 | position.getBlockX() & 0xF)] = (byte) biome.getId();
             return true;
         }
@@ -237,8 +279,13 @@ public class ForgeWorld extends AbstractWorld {
 
     @Override
     public boolean useItem(Vector position, BaseItem item, Direction face) {
-        Item nativeItem = Item.getItemById(item.getType());
-        ItemStack stack = new ItemStack(nativeItem, 1, item.getData());
+        Item nativeItem = Item.getByNameOrId(item.getType().getId());
+        ItemStack stack = null;
+        if (item.getNbtData() == null) {
+            stack = new ItemStack(nativeItem, 1, 0);
+        } else {
+            stack = new ItemStack(nativeItem, 1, 0, NBTConverter.toNative(item.getNbtData()));
+        }
         World world = getWorld();
         EnumActionResult used = stack.onItemUse(new WorldEditFakePlayer((WorldServer) world), world, ForgeAdapter.toBlockPos(position),
                 EnumHand.MAIN_HAND, ForgeAdapter.adapt(face), 0, 0, 0);
@@ -250,13 +297,21 @@ public class ForgeWorld extends AbstractWorld {
         checkNotNull(position);
         checkNotNull(item);
 
-        if (item.getType() == 0) {
+        if (item.getType() == ItemTypes.AIR) {
             return;
         }
 
         EntityItem entity = new EntityItem(getWorld(), position.getX(), position.getY(), position.getZ(), ForgeWorldEdit.toForgeItemStack(item));
         entity.setPickupDelay(10);
         getWorld().spawnEntity(entity);
+    }
+
+    @Override
+    public void simulateBlockMine(Vector position) {
+        BlockPos pos = ForgeAdapter.toBlockPos(position);
+        IBlockState state = getWorld().getBlockState(pos);
+        state.getBlock().dropBlockAsItem(getWorld(), pos, state, 0);
+        getWorld().setBlockToAir(pos);
     }
 
     @Override
@@ -278,7 +333,7 @@ public class ForgeWorld extends AbstractWorld {
         AnvilSaveHandler saveHandler = new AnvilSaveHandler(saveFolder,
                 originalWorld.getSaveHandler().getWorldDirectory().getName(), true, server.getDataFixer());
         World freshWorld = new WorldServer(server, saveHandler, originalWorld.getWorldInfo(),
-                originalWorld.provider.getDimension(), originalWorld.theProfiler).init();
+                originalWorld.provider.getDimension(), originalWorld.profiler).init();
 
         // Pre-gen all the chunks
         // We need to also pull one more chunk in every direction
@@ -290,7 +345,7 @@ public class ForgeWorld extends AbstractWorld {
         ForgeWorld from = new ForgeWorld(freshWorld);
         try {
             for (BlockVector vec : region) {
-                editSession.setBlock(vec, from.getBlock(vec));
+                editSession.setBlock(vec, from.getFullBlock(vec));
             }
         } catch (MaxChangedBlocksException e) {
             throw new RuntimeException(e);
@@ -333,40 +388,114 @@ public class ForgeWorld extends AbstractWorld {
     @Override
     public boolean generateTree(TreeType type, EditSession editSession, Vector position) throws MaxChangedBlocksException {
         WorldGenerator generator = createWorldGenerator(type);
-        return generator != null ? generator.generate(getWorld(), random, ForgeAdapter.toBlockPos(position)) : false;
+        return generator != null && generator.generate(getWorld(), random, ForgeAdapter.toBlockPos(position));
     }
 
     @Override
-    public WorldData getWorldData() {
-        return ForgeWorldData.getInstance();
+    public void checkLoadedChunk(Vector pt) {
+        getWorld().getChunkFromBlockCoords(ForgeAdapter.toBlockPos(pt));
     }
 
     @Override
-    public boolean isValidBlockType(int id) {
-        Block block = Block.getBlockById(id);
-        return Block.getIdFromBlock(block) == id;
+    public void fixAfterFastMode(Iterable<BlockVector2D> chunks) {
+        fixLighting(chunks);
     }
 
     @Override
-    public BaseBlock getBlock(Vector position) {
+    public void fixLighting(Iterable<BlockVector2D> chunks) {
         World world = getWorld();
-        BlockPos pos = new BlockPos(position.getBlockX(), position.getBlockY(), position.getBlockZ());
-        IBlockState state = world.getBlockState(pos);
-        TileEntity tile = getWorld().getTileEntity(pos);
-
-        if (tile != null) {
-            return new TileEntityBaseBlock(Block.getIdFromBlock(state.getBlock()), state.getBlock().getMetaFromState(state), tile);
-        } else {
-            return new BaseBlock(Block.getIdFromBlock(state.getBlock()), state.getBlock().getMetaFromState(state));
+        for (BlockVector2D chunk : chunks) {
+            world.getChunkFromChunkCoords(chunk.getBlockX(), chunk.getBlockZ()).resetRelightChecks();
         }
     }
 
     @Override
-    public BaseBlock getLazyBlock(Vector position) {
+    public boolean playEffect(Vector position, int type, int data) {
+        getWorld().playEvent(type, ForgeAdapter.toBlockPos(position), data);
+        return true;
+    }
+
+    @Override
+    public WeatherType getWeather() {
+        WorldInfo info = getWorld().getWorldInfo();
+        if (info.isThundering()) {
+            return WeatherTypes.THUNDER_STORM;
+        }
+        if (info.isRaining()) {
+            return WeatherTypes.RAIN;
+        }
+        return WeatherTypes.CLEAR;
+    }
+
+    @Override
+    public long getRemainingWeatherDuration() {
+        WorldInfo info = getWorld().getWorldInfo();
+        if (info.isThundering()) {
+            return info.getThunderTime();
+        }
+        if (info.isRaining()) {
+            return info.getRainTime();
+        }
+        return info.getCleanWeatherTime();
+    }
+
+    @Override
+    public void setWeather(WeatherType weatherType) {
+        setWeather(weatherType, 0);
+    }
+
+    @Override
+    public void setWeather(WeatherType weatherType, long duration) {
+        WorldInfo info = getWorld().getWorldInfo();
+        if (WeatherTypes.THUNDER_STORM.equals(weatherType)) {
+            info.setCleanWeatherTime(0);
+            info.setThundering(true);
+            info.setThunderTime((int) duration);
+        } else if (WeatherTypes.RAIN.equals(weatherType)) {
+            info.setCleanWeatherTime(0);
+            info.setRaining(true);
+            info.setRainTime((int) duration);
+        } else if (WeatherTypes.CLEAR.equals(weatherType)) {
+            info.setRaining(false);
+            info.setThundering(false);
+            info.setCleanWeatherTime((int) duration);
+        }
+    }
+
+    @Override
+    public BlockState getBlock(Vector position) {
         World world = getWorld();
         BlockPos pos = new BlockPos(position.getBlockX(), position.getBlockY(), position.getBlockZ());
-        IBlockState state = world.getBlockState(pos);
-        return new LazyBlock(Block.getIdFromBlock(state.getBlock()), state.getBlock().getMetaFromState(state), this, position);
+        IBlockState mcState = world.getBlockState(pos);
+
+        BlockType blockType = BlockType.REGISTRY.get(Block.REGISTRY.getNameForObject(mcState.getBlock()).toString());
+        return blockType.getState(adaptProperties(blockType, mcState.getProperties()));
+    }
+
+    private Map<Property<?>, Object> adaptProperties(BlockType block, Map<IProperty<?>, Comparable<?>> mcProps) {
+        Map<Property<?>, Object> props = new TreeMap<>(Comparator.comparing(Property::getName));
+        for (Map.Entry<IProperty<?>, Comparable<?>> prop : mcProps.entrySet()) {
+            Object value = prop.getValue();
+            if (prop.getKey() instanceof PropertyDirection) {
+                value = ForgeAdapter.adaptEnumFacing((EnumFacing) value);
+            } else if (prop.getKey() instanceof PropertyEnum) {
+                value = ((IStringSerializable) value).getName();
+            }
+            props.put(block.getProperty(prop.getKey().getName()), value);
+        }
+        return props;
+    }
+
+    @Override
+    public BaseBlock getFullBlock(Vector position) {
+        BlockPos pos = new BlockPos(position.getBlockX(), position.getBlockY(), position.getBlockZ());
+        TileEntity tile = getWorld().getTileEntity(pos);
+
+        if (tile != null) {
+            return getBlock(position).toBaseBlock(NBTConverter.fromNative(TileEntityUtils.copyNbtData(tile)));
+        } else {
+            return getBlock(position).toBaseBlock();
+        }
     }
 
     @Override
@@ -382,7 +511,7 @@ public class ForgeWorld extends AbstractWorld {
             ForgeWorld other = ((ForgeWorld) o);
             World otherWorld = other.worldRef.get();
             World thisWorld = worldRef.get();
-            return otherWorld != null && thisWorld != null && otherWorld.equals(thisWorld);
+            return otherWorld != null && otherWorld.equals(thisWorld);
         } else if (o instanceof com.sk89q.worldedit.world.World) {
             return ((com.sk89q.worldedit.world.World) o).getName().equals(getName());
         } else {
@@ -392,7 +521,7 @@ public class ForgeWorld extends AbstractWorld {
 
     @Override
     public List<? extends Entity> getEntities(Region region) {
-        List<Entity> entities = new ArrayList<Entity>();
+        List<Entity> entities = new ArrayList<>();
         for (net.minecraft.entity.Entity entity : getWorld().loadedEntityList) {
             if (region.contains(new Vector(entity.posX, entity.posY, entity.posZ))) {
                 entities.add(new ForgeEntity(entity));
@@ -403,7 +532,7 @@ public class ForgeWorld extends AbstractWorld {
 
     @Override
     public List<? extends Entity> getEntities() {
-        List<Entity> entities = new ArrayList<Entity>();
+        List<Entity> entities = new ArrayList<>();
         for (net.minecraft.entity.Entity entity : getWorld().loadedEntityList) {
             entities.add(new ForgeEntity(entity));
         }
@@ -414,7 +543,7 @@ public class ForgeWorld extends AbstractWorld {
     @Override
     public Entity createEntity(Location location, BaseEntity entity) {
         World world = getWorld();
-        net.minecraft.entity.Entity createdEntity = EntityList.createEntityByIDFromName(new ResourceLocation(entity.getTypeId()), world);
+        net.minecraft.entity.Entity createdEntity = EntityList.createEntityByIDFromName(new ResourceLocation(entity.getType().getId()), world);
         if (createdEntity != null) {
             CompoundTag nativeTag = entity.getNbtData();
             if (nativeTag != null) {

@@ -19,17 +19,18 @@
 
 package com.sk89q.worldedit.forge;
 
-import com.sk89q.worldedit.Vector;
+import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.lang.reflect.Constructor;
-import javax.annotation.Nullable;
+import com.sk89q.worldedit.Vector;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagInt;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import java.lang.reflect.Constructor;
+
+import javax.annotation.Nullable;
 
 /**
  * Utility methods for setting tile entities in the world.
@@ -139,4 +140,9 @@ final class TileEntityUtils {
         return genericTE;
     }
 
+    public static NBTTagCompound copyNbtData(TileEntity tile) {
+        NBTTagCompound tag = new NBTTagCompound();
+        tile.writeToNBT(tag);
+        return tag;
+    }
 }

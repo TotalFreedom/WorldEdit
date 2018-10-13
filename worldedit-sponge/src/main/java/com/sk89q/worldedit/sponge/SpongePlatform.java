@@ -23,22 +23,32 @@ import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.entity.Player;
 import com.sk89q.worldedit.event.platform.CommandEvent;
 import com.sk89q.worldedit.event.platform.CommandSuggestionEvent;
-import com.sk89q.worldedit.extension.platform.*;
+import com.sk89q.worldedit.extension.platform.AbstractPlatform;
+import com.sk89q.worldedit.extension.platform.Actor;
+import com.sk89q.worldedit.extension.platform.Capability;
+import com.sk89q.worldedit.extension.platform.MultiUserPlatform;
+import com.sk89q.worldedit.extension.platform.Preference;
 import com.sk89q.worldedit.sponge.config.SpongeConfiguration;
 import com.sk89q.worldedit.util.command.CommandMapping;
 import com.sk89q.worldedit.util.command.Dispatcher;
 import com.sk89q.worldedit.world.World;
+import com.sk89q.worldedit.world.registry.Registries;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.entity.EntityType;
-import org.spongepowered.api.item.ItemType;
 import org.spongepowered.api.scheduler.Task;
 import org.spongepowered.api.world.Location;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import javax.annotation.Nullable;
-import java.util.*;
 
 class SpongePlatform extends AbstractPlatform implements MultiUserPlatform {
 
@@ -54,13 +64,8 @@ class SpongePlatform extends AbstractPlatform implements MultiUserPlatform {
     }
 
     @Override
-    public int resolveItem(String name) {
-        if (name == null) return 0;
-
-        Optional<ItemType> optType = Sponge.getRegistry().getType(ItemType.class, name);
-
-        return optType.map(itemType -> SpongeWorldEdit.inst().getAdapter().resolve(itemType)).orElse(0);
-
+    public Registries getRegistries() {
+        return SpongeRegistries.getInstance();
     }
 
     @Override
@@ -96,7 +101,7 @@ class SpongePlatform extends AbstractPlatform implements MultiUserPlatform {
             return player;
         } else {
             Optional<org.spongepowered.api.entity.living.player.Player> optPlayer = Sponge.getServer().getPlayer(player.getUniqueId());
-            return optPlayer.isPresent() ? new SpongePlayer(this, optPlayer.get()) : null;
+            return optPlayer.<Player>map(player1 -> new SpongePlayer(this, player1)).orElse(null);
         }
     }
 
@@ -178,7 +183,7 @@ class SpongePlatform extends AbstractPlatform implements MultiUserPlatform {
 
     @Override
     public Collection<Actor> getConnectedUsers() {
-        List<Actor> users = new ArrayList<Actor>();
+        List<Actor> users = new ArrayList<>();
         for (org.spongepowered.api.entity.living.player.Player player : Sponge.getServer().getOnlinePlayers()) {
             users.add(new SpongePlayer(this, player));
         }

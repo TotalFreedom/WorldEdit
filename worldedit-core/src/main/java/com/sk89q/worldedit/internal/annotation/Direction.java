@@ -17,7 +17,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package com.sk89q.worldedit.internal.annotation;
 
 import com.sk89q.worldedit.Vector;
@@ -34,6 +33,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.PARAMETER)
 public @interface Direction {
     
-    public static final String AIM = "me";
+    String AIM = "me";
 
 }

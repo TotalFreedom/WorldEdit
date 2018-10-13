@@ -19,44 +19,49 @@
 
 package com.sk89q.worldedit.sponge;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.flowpowered.math.vector.Vector3d;
 import com.flowpowered.math.vector.Vector3i;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
 import com.sk89q.worldedit.WorldEditException;
-import com.sk89q.worldedit.blocks.BaseBlock;
+import com.sk89q.worldedit.world.block.BaseBlock;
 import com.sk89q.worldedit.blocks.BaseItemStack;
 import com.sk89q.worldedit.entity.BaseEntity;
 import com.sk89q.worldedit.entity.Entity;
 import com.sk89q.worldedit.regions.Region;
+import com.sk89q.worldedit.registry.state.Property;
 import com.sk89q.worldedit.util.Location;
 import com.sk89q.worldedit.world.AbstractWorld;
 import com.sk89q.worldedit.world.biome.BaseBiome;
-import com.sk89q.worldedit.world.registry.WorldData;
+import com.sk89q.worldedit.world.block.BlockStateHolder;
+import com.sk89q.worldedit.world.item.ItemTypes;
+import com.sk89q.worldedit.world.weather.WeatherType;
+import com.sk89q.worldedit.world.weather.WeatherTypes;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.block.BlockSnapshot;
 import org.spongepowered.api.block.BlockState;
+import org.spongepowered.api.block.BlockType;
+import org.spongepowered.api.block.BlockTypes;
 import org.spongepowered.api.block.tileentity.TileEntity;
 import org.spongepowered.api.data.key.Keys;
 import org.spongepowered.api.data.property.block.GroundLuminanceProperty;
 import org.spongepowered.api.data.property.block.SkyLuminanceProperty;
 import org.spongepowered.api.entity.EntityType;
 import org.spongepowered.api.entity.EntityTypes;
-import org.spongepowered.api.event.cause.Cause;
-import org.spongepowered.api.event.cause.NamedCause;
-import org.spongepowered.api.event.cause.entity.spawn.SpawnCause;
-import org.spongepowered.api.event.cause.entity.spawn.SpawnTypes;
-import org.spongepowered.api.world.BlockChangeFlag;
+import org.spongepowered.api.world.BlockChangeFlags;
 import org.spongepowered.api.world.World;
+import org.spongepowered.api.world.weather.Weather;
 
-import javax.annotation.Nullable;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import javax.annotation.Nullable;
 
 /**
  * An adapter to Minecraft worlds for WorldEdit.
@@ -110,14 +115,26 @@ public abstract class SpongeWorld extends AbstractWorld {
         return getWorld().getName();
     }
 
-    protected abstract BlockState getBlockState(BaseBlock block);
+    @SuppressWarnings("WeakerAccess")
+    protected BlockState getBlockState(BlockStateHolder<?> block) {
+        if (block instanceof com.sk89q.worldedit.world.block.BlockState) {
+            BlockState state = Sponge.getRegistry().getType(BlockType.class, block.getBlockType().getId()).orElse(BlockTypes.AIR).getDefaultState();
+            for (Map.Entry<Property<?>, Object> entry : block.getStates().entrySet()) {
+                // TODO Convert across states
+            }
+            return state;
+        } else {
+            throw new UnsupportedOperationException("Missing Sponge adapter for WorldEdit!");
+        }
+    }
 
+    @SuppressWarnings("WeakerAccess")
     protected abstract void applyTileEntityData(TileEntity entity, BaseBlock block);
 
     private static final BlockSnapshot.Builder builder = BlockSnapshot.builder();
 
     @Override
-    public boolean setBlock(Vector position, BaseBlock block, boolean notifyAndLight) throws WorldEditException {
+    public boolean setBlock(Vector position, BlockStateHolder block, boolean notifyAndLight) throws WorldEditException {
         checkNotNull(position);
         checkNotNull(block);
 
@@ -133,12 +150,12 @@ public abstract class SpongeWorld extends AbstractWorld {
                 .world(world.getProperties())
                 .build();
 
-        snapshot.restore(true, notifyAndLight ? BlockChangeFlag.ALL : BlockChangeFlag.NONE);
+        snapshot.restore(true, notifyAndLight ? BlockChangeFlags.ALL : BlockChangeFlags.NONE);
 
         // Create the TileEntity
-        if (block.hasNbtData()) {
+        if (block instanceof BaseBlock && ((BaseBlock) block).hasNbtData()) {
             // Kill the old TileEntity
-            world.getTileEntity(pos).ifPresent(tileEntity -> applyTileEntityData(tileEntity, block));
+            world.getTileEntity(pos).ifPresent(tileEntity -> applyTileEntityData(tileEntity, (BaseBlock) block));
         }
 
         return true;
@@ -187,7 +204,7 @@ public abstract class SpongeWorld extends AbstractWorld {
         checkNotNull(position);
         checkNotNull(item);
 
-        if (item.getType() == 0) {
+        if (item.getType() == ItemTypes.AIR) {
             return;
         }
 
@@ -197,17 +214,12 @@ public abstract class SpongeWorld extends AbstractWorld {
         );
 
         entity.offer(Keys.REPRESENTED_ITEM, SpongeWorldEdit.toSpongeItemStack(item).createSnapshot());
-        getWorld().spawnEntity(entity, ENTITY_SPAWN_CAUSE);
+        getWorld().spawnEntity(entity);
     }
 
     @Override
-    public WorldData getWorldData() {
-        return SpongeWorldData.getInstance();
-    }
-
-    @Override
-    public boolean isValidBlockType(int id) {
-        return id == 0 || SpongeWorldEdit.inst().getAdapter().resolveBlock(id) != null;
+    public void simulateBlockMine(Vector position) {
+        // TODO
     }
 
     @Override
@@ -223,7 +235,7 @@ public abstract class SpongeWorld extends AbstractWorld {
             SpongeWorld other = ((SpongeWorld) o);
             World otherWorld = other.worldRef.get();
             World thisWorld = worldRef.get();
-            return otherWorld != null && thisWorld != null && otherWorld.equals(thisWorld);
+            return otherWorld != null && otherWorld.equals(thisWorld);
         } else {
             return o instanceof com.sk89q.worldedit.world.World
                     && ((com.sk89q.worldedit.world.World) o).getName().equals(getName());
@@ -253,17 +265,12 @@ public abstract class SpongeWorld extends AbstractWorld {
 
     protected abstract void applyEntityData(org.spongepowered.api.entity.Entity entity, BaseEntity data);
 
-    private static final Cause ENTITY_SPAWN_CAUSE = Cause
-            .source(SpawnCause.builder().type(SpawnTypes.PLUGIN).build())
-            .suggestNamed(NamedCause.SOURCE, SpongeWorldEdit.inst())
-            .build();
-
     @Nullable
     @Override
     public Entity createEntity(Location location, BaseEntity entity) {
         World world = getWorld();
 
-        EntityType entityType = Sponge.getRegistry().getType(EntityType.class, entity.getTypeId()).get();
+        EntityType entityType = Sponge.getRegistry().getType(EntityType.class, entity.getType().getId()).get();
         Vector3d pos = new Vector3d(location.getX(), location.getY(), location.getZ());
 
         org.spongepowered.api.entity.Entity newEnt = world.createEntity(entityType, pos);
@@ -279,11 +286,31 @@ public abstract class SpongeWorld extends AbstractWorld {
                 new Vector3d(dir.getX(), dir.getY(), dir.getZ())
         );
 
-        if (world.spawnEntity(newEnt, ENTITY_SPAWN_CAUSE)) {
+        if (world.spawnEntity(newEnt)) {
             return new SpongeEntity(newEnt);
         }
 
         return null;
+    }
+
+    @Override
+    public WeatherType getWeather() {
+        return WeatherTypes.get(getWorld().getWeather().getId());
+    }
+
+    @Override
+    public long getRemainingWeatherDuration() {
+        return getWorld().getRemainingDuration();
+    }
+
+    @Override
+    public void setWeather(WeatherType weatherType) {
+        getWorld().setWeather(Sponge.getRegistry().getType(Weather.class, weatherType.getId()).get());
+    }
+
+    @Override
+    public void setWeather(WeatherType weatherType, long duration) {
+        getWorld().setWeather(Sponge.getRegistry().getType(Weather.class, weatherType.getId()).get(), duration);
     }
 
     /**

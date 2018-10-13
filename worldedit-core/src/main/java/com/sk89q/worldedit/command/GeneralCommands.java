@@ -20,6 +20,11 @@
 package com.sk89q.worldedit.command;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+<<<<<<< HEAD
+=======
+
+import com.google.common.collect.Sets;
+>>>>>>> 815f14d4a165418de486333d4721e3f1271f2480
 import com.sk89q.minecraft.util.commands.Command;
 import com.sk89q.minecraft.util.commands.CommandContext;
 import com.sk89q.minecraft.util.commands.CommandPermissions;
@@ -28,12 +33,21 @@ import com.sk89q.worldedit.LocalConfiguration;
 import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldEditException;
+<<<<<<< HEAD
 import com.sk89q.worldedit.blocks.ItemType;
+=======
+>>>>>>> 815f14d4a165418de486333d4721e3f1271f2480
 import com.sk89q.worldedit.entity.Player;
+import com.sk89q.worldedit.extension.input.DisallowedUsageException;
 import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.function.mask.Mask;
 import com.sk89q.worldedit.util.command.parametric.Optional;
+<<<<<<< HEAD
 import me.totalfreedom.worldedit.WorldEditHandler;
+=======
+import com.sk89q.worldedit.world.item.ItemType;
+import com.sk89q.worldedit.world.item.ItemTypes;
+>>>>>>> 815f14d4a165418de486333d4721e3f1271f2480
 
 /**
  * General WorldEdit commands.
@@ -130,6 +144,41 @@ public class GeneralCommands {
     }
 
     @Command(
+            aliases = { "/drawsel" },
+            usage = "[on|off]",
+            desc = "Toggle drawing the current selection",
+            min = 0,
+            max = 1
+    )
+    @CommandPermissions("worldedit.drawsel")
+    public void drawSelection(Player player, LocalSession session, CommandContext args) throws WorldEditException {
+
+        if (!WorldEdit.getInstance().getConfiguration().serverSideCUI) {
+            throw new DisallowedUsageException("This functionality is disabled in the configuration!");
+        }
+        String newState = args.getString(0, null);
+        if (session.shouldUseServerCUI()) {
+            if ("on".equals(newState)) {
+                player.printError("Server CUI already enabled.");
+                return;
+            }
+
+            session.setUseServerCUI(false);
+            session.updateServerCUI(player);
+            player.print("Server CUI disabled.");
+        } else {
+            if ("off".equals(newState)) {
+                player.printError("Server CUI already disabled.");
+                return;
+            }
+
+            session.setUseServerCUI(true);
+            session.updateServerCUI(player);
+            player.print("Server CUI enabled. This only supports cuboid regions, with a maximum size of 32x32x32.");
+        }
+    }
+
+    @Command(
         aliases = { "/gmask", "gmask" },
         usage = "[mask]",
         desc = "Set the global mask",
@@ -182,64 +231,55 @@ public class GeneralCommands {
         boolean blocksOnly = args.hasFlag('b');
         boolean itemsOnly = args.hasFlag('i');
 
-        try {
-            int id = Integer.parseInt(query);
+        ItemType type = ItemTypes.get(query);
 
-            ItemType type = ItemType.fromID(id);
-
-            if (type != null) {
-                actor.print("#" + type.getID() + " (" + type.getName() + ")");
-            } else {
-                actor.printError("No item found by ID " + id);
-            }
-
-            return;
-        } catch (NumberFormatException ignored) {
-        }
-
-        if (query.length() <= 2) {
-            actor.printError("Enter a longer search string (len > 2).");
-            return;
-        }
-
-        if (!blocksOnly && !itemsOnly) {
-            actor.print("Searching for: " + query);
-        } else if (blocksOnly && itemsOnly) {
-            actor.printError("You cannot use both the 'b' and 'i' flags simultaneously.");
-            return;
-        } else if (blocksOnly) {
-            actor.print("Searching for blocks: " + query);
+        if (type != null) {
+            actor.print(type.getId() + " (" + type.getName() + ")");
         } else {
-            actor.print("Searching for items: " + query);
-        }
-
-        int found = 0;
-
-        for (ItemType type : ItemType.values()) {
-            if (found >= 15) {
-                actor.print("Too many results!");
-                break;
+            if (query.length() <= 2) {
+                actor.printError("Enter a longer search string (len > 2).");
+                return;
             }
 
-            if (blocksOnly && type.getID() > 255) {
-                continue;
+            if (!blocksOnly && !itemsOnly) {
+                actor.print("Searching for: " + query);
+            } else if (blocksOnly && itemsOnly) {
+                actor.printError("You cannot use both the 'b' and 'i' flags simultaneously.");
+                return;
+            } else if (blocksOnly) {
+                actor.print("Searching for blocks: " + query);
+            } else {
+                actor.print("Searching for items: " + query);
             }
 
-            if (itemsOnly && type.getID() <= 255) {
-                continue;
-            }
+            int found = 0;
 
-            for (String alias : type.getAliases()) {
-                if (alias.contains(query)) {
-                    actor.print("#" + type.getID() + " (" + type.getName() + ")");
-                    ++found;
+            for (ItemType searchType : ItemType.REGISTRY) {
+                if (found >= 15) {
+                    actor.print("Too many results!");
                     break;
                 }
-            }
-        }
 
-        if (found == 0) {
-            actor.printError("No items found.");
+                if (blocksOnly && !searchType.hasBlockType()) {
+                    continue;
+                }
+
+                if (itemsOnly && searchType.hasBlockType()) {
+                    continue;
+                }
+
+                for (String alias : Sets.newHashSet(searchType.getId(), searchType.getName())) {
+                    if (alias.contains(query)) {
+                        actor.print(searchType.getId() + " (" + searchType.getName() + ")");
+                        ++found;
+                        break;
+                    }
+                }
+            }
+
+            if (found == 0) {
+                actor.printError("No items found.");
+            }
         }
     }
 
