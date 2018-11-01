@@ -19,15 +19,14 @@
 
 package com.sk89q.worldedit.extent.world;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.WorldEditException;
-import com.sk89q.worldedit.blocks.BaseBlock;
-import com.sk89q.worldedit.blocks.BlockID;
 import com.sk89q.worldedit.extent.AbstractDelegateExtent;
 import com.sk89q.worldedit.extent.Extent;
 import com.sk89q.worldedit.world.World;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import com.sk89q.worldedit.world.block.BlockStateHolder;
 
 /**
  * Makes changes to the world as if a player had done so during survival mode.
@@ -80,8 +79,8 @@ public class SurvivalModeExtent extends AbstractDelegateExtent {
     }
 
     @Override
-    public boolean setBlock(Vector location, BaseBlock block) throws WorldEditException {
-        if (toolUse && block.getType() == BlockID.AIR) {
+    public boolean setBlock(Vector location, BlockStateHolder block) throws WorldEditException {
+        if (toolUse && block.getBlockType().getMaterial().isAir()) {
             world.simulateBlockMine(location);
             return true;
         } else {

@@ -24,14 +24,13 @@ import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.MaxChangedBlocksException;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.Vector2D;
-import com.sk89q.worldedit.blocks.BaseBlock;
+import com.sk89q.worldedit.world.block.BaseBlock;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.world.DataException;
 import com.sk89q.worldedit.world.chunk.Chunk;
 import com.sk89q.worldedit.world.storage.ChunkStore;
 import com.sk89q.worldedit.world.storage.MissingChunkException;
-import com.sk89q.worldedit.world.storage.MissingWorldException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,7 +43,7 @@ import java.util.Map;
  */
 public class SnapshotRestore {
 
-    private final Map<BlockVector2D, ArrayList<Vector>> neededChunks = new LinkedHashMap<BlockVector2D, ArrayList<Vector>>();
+    private final Map<BlockVector2D, ArrayList<Vector>> neededChunks = new LinkedHashMap<>();
     private final ChunkStore chunkStore;
     private final EditSession editSession;
     private ArrayList<Vector2D> missingChunks;
@@ -111,7 +110,7 @@ public class SnapshotRestore {
 
         // Unidentified chunk
         if (!neededChunks.containsKey(chunkPos)) {
-            neededChunks.put(chunkPos, new ArrayList<Vector>());
+            neededChunks.put(chunkPos, new ArrayList<>());
         }
 
         neededChunks.get(chunkPos).add(pos);
@@ -133,8 +132,8 @@ public class SnapshotRestore {
      */
     public void restore() throws MaxChangedBlocksException {
 
-        missingChunks = new ArrayList<Vector2D>();
-        errorChunks = new ArrayList<Vector2D>();
+        missingChunks = new ArrayList<>();
+        errorChunks = new ArrayList<>();
 
         // Now let's start restoring!
         for (Map.Entry<BlockVector2D, ArrayList<Vector>> entry : neededChunks.entrySet()) {
@@ -148,23 +147,16 @@ public class SnapshotRestore {
                 // Now just copy blocks!
                 for (Vector pos : entry.getValue()) {
                     try {
-                        BaseBlock block = chunk.getBlock(pos);
-                        editSession.setBlock(pos, block);
+                        editSession.setBlock(pos, chunk.getBlock(pos));
                     } catch (DataException e) {
                         // this is a workaround: just ignore for now
                     }
                 }
             } catch (MissingChunkException me) {
                 missingChunks.add(chunkPos);
-            } catch (MissingWorldException me) {
+            } catch (IOException | DataException me) {
                 errorChunks.add(chunkPos);
                 lastErrorMessage = me.getMessage();
-            } catch (DataException de) {
-                errorChunks.add(chunkPos);
-                lastErrorMessage = de.getMessage();
-            } catch (IOException ioe) {
-                errorChunks.add(chunkPos);
-                lastErrorMessage = ioe.getMessage();
             }
         }
     }
