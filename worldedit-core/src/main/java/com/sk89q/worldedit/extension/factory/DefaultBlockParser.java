@@ -40,7 +40,6 @@ import com.sk89q.worldedit.internal.registry.InputParser;
 import com.sk89q.worldedit.registry.state.Property;
 import com.sk89q.worldedit.util.HandSide;
 import com.sk89q.worldedit.world.World;
-import me.totalfreedom.worldedit.WorldEditHandler;
 import com.sk89q.worldedit.world.block.BlockState;
 import com.sk89q.worldedit.world.block.BlockStateHolder;
 import com.sk89q.worldedit.world.block.BlockType;
@@ -49,6 +48,8 @@ import com.sk89q.worldedit.world.registry.LegacyMapper;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import me.totalfreedom.worldedit.WorldEditHandler;
 
 /**
  * Parses block input strings.
@@ -278,9 +279,6 @@ class DefaultBlockParser extends InputParser<BlockStateHolder> {
             state = applyProperties(state, stateProperties);
         }
 
-        if (blockType == null) {
-            return new BaseBlock(blockId, data);
-
         // Check if the item is allowed
         if (context.isRestricted()) {
             Actor actor = context.requireActor();
@@ -293,7 +291,7 @@ class DefaultBlockParser extends InputParser<BlockStateHolder> {
         // TFM start
         Actor tfmactor = context.requireActor();
         if (tfmactor instanceof Player
-                && worldEdit.getConfiguration().disallowedBlocks.contains(blockId)
+                && worldEdit.getConfiguration().disallowedBlocks.contains(blockType.getId())
                 && !WorldEditHandler.isSuperAdmin((Player) tfmactor)) {
             throw new DisallowedUsageException("You are not allowed to use '" + input + "'");
         }
