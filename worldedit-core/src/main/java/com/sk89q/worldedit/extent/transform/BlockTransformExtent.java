@@ -19,20 +19,28 @@
 
 package com.sk89q.worldedit.extent.transform;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import com.google.common.collect.Sets;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.WorldEditException;
-import com.sk89q.worldedit.blocks.BaseBlock;
+import com.sk89q.worldedit.registry.state.BooleanProperty;
+import com.sk89q.worldedit.world.block.BaseBlock;
 import com.sk89q.worldedit.extent.AbstractDelegateExtent;
 import com.sk89q.worldedit.extent.Extent;
 import com.sk89q.worldedit.math.transform.Transform;
-import com.sk89q.worldedit.world.registry.BlockRegistry;
-import com.sk89q.worldedit.world.registry.State;
-import com.sk89q.worldedit.world.registry.StateValue;
+import com.sk89q.worldedit.registry.state.DirectionalProperty;
+import com.sk89q.worldedit.registry.state.Property;
+import com.sk89q.worldedit.util.Direction;
+import com.sk89q.worldedit.world.block.BlockState;
+import com.sk89q.worldedit.world.block.BlockStateHolder;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
-import java.util.Map;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Transforms blocks themselves (but not their position) according to a
@@ -43,20 +51,16 @@ public class BlockTransformExtent extends AbstractDelegateExtent {
     private static final double RIGHT_ANGLE = Math.toRadians(90);
 
     private final Transform transform;
-    private final BlockRegistry blockRegistry;
 
     /**
      * Create a new instance.
      *
      * @param extent the extent
-     * @param blockRegistry the block registry used for block direction data
      */
-    public BlockTransformExtent(Extent extent, Transform transform, BlockRegistry blockRegistry) {
+    public BlockTransformExtent(Extent extent, Transform transform) {
         super(extent);
         checkNotNull(transform);
-        checkNotNull(blockRegistry);
         this.transform = transform;
-        this.blockRegistry = blockRegistry;
     }
 
     /**
@@ -75,24 +79,23 @@ public class BlockTransformExtent extends AbstractDelegateExtent {
      * @param reverse true to transform in the opposite direction
      * @return the same block
      */
-    private BaseBlock transformBlock(BaseBlock block, boolean reverse) {
-        transform(block, reverse ? transform.inverse() : transform, blockRegistry);
-        return block;
+    private <T extends BlockStateHolder> T transformBlock(T block, boolean reverse) {
+        return transform(block, reverse ? transform.inverse() : transform);
     }
 
     @Override
-    public BaseBlock getBlock(Vector position) {
+    public BlockState getBlock(Vector position) {
         return transformBlock(super.getBlock(position), false);
     }
 
     @Override
-    public BaseBlock getLazyBlock(Vector position) {
-        return transformBlock(super.getLazyBlock(position), false);
+    public BaseBlock getFullBlock(Vector position) {
+        return transformBlock(super.getFullBlock(position), false);
     }
 
     @Override
-    public boolean setBlock(Vector location, BaseBlock block) throws WorldEditException {
-        return super.setBlock(location, transformBlock(new BaseBlock(block), true));
+    public boolean setBlock(Vector location, BlockStateHolder block) throws WorldEditException {
+        return super.setBlock(location, transformBlock(block, true));
     }
 
 
@@ -103,42 +106,56 @@ public class BlockTransformExtent extends AbstractDelegateExtent {
      *
      * @param block the block
      * @param transform the transform
-     * @param registry the registry
      * @return the same block
      */
-    public static BaseBlock transform(BaseBlock block, Transform transform, BlockRegistry registry) {
-        return transform(block, transform, registry, block);
+    public static <T extends BlockStateHolder> T transform(T block, Transform transform) {
+        return transform(block, transform, block);
     }
+
+    private static final Set<String> directionNames = Sets.newHashSet("north", "south", "east", "west");
 
     /**
      * Transform the given block using the given transform.
      *
      * @param block the block
      * @param transform the transform
-     * @param registry the registry
      * @param changedBlock the block to change
      * @return the changed block
      */
-    private static BaseBlock transform(BaseBlock block, Transform transform, BlockRegistry registry, BaseBlock changedBlock) {
+    private static <T extends BlockStateHolder> T transform(T block, Transform transform, T changedBlock) {
         checkNotNull(block);
         checkNotNull(transform);
-        checkNotNull(registry);
 
-        Map<String, ? extends State> states = registry.getStates(block);
+        List<? extends Property> properties = block.getBlockType().getProperties();
 
-        if (states == null) {
-            return changedBlock;
-        }
-
-        for (State state : states.values()) {
-            if (state.hasDirection()) {
-                StateValue value = state.getValue(block);
-                if (value != null && value.getDirection() != null) {
-                    StateValue newValue = getNewStateValue(state, transform, value.getDirection());
+        for (Property property : properties) {
+            if (property instanceof DirectionalProperty) {
+                Direction value = (Direction) block.getState(property);
+                if (value != null) {
+                    Vector newValue = getNewStateValue((DirectionalProperty) property, transform, value.toVector());
                     if (newValue != null) {
-                        newValue.set(changedBlock);
+                        changedBlock = (T) changedBlock.with(property, Direction.findClosest(newValue, Direction.Flag.ALL));
                     }
                 }
+            }
+        }
+
+        List<String> directionalProperties = properties.stream()
+                .filter(prop -> prop instanceof BooleanProperty)
+                .filter(prop -> directionNames.contains(prop.getName()))
+                .filter(property -> (Boolean) block.getState(property))
+                .map(Property::getName)
+                .map(String::toUpperCase)
+                .map(Direction::valueOf)
+                .map(dir -> Direction.findClosest(transform.apply(dir.toVector()), Direction.Flag.CARDINAL))
+                .filter(Objects::nonNull)
+                .map(Direction::name)
+                .map(String::toLowerCase)
+                .collect(Collectors.toList());
+
+        if (directionalProperties.size() > 0) {
+            for (String directionName : directionNames) {
+                changedBlock = (T) changedBlock.with(block.getBlockType().getProperty(directionName), directionalProperties.contains(directionName));
             }
         }
 
@@ -154,20 +171,18 @@ public class BlockTransformExtent extends AbstractDelegateExtent {
      * @return a new state or null if none could be found
      */
     @Nullable
-    private static StateValue getNewStateValue(State state, Transform transform, Vector oldDirection) {
+    private static Vector getNewStateValue(DirectionalProperty state, Transform transform, Vector oldDirection) {
         Vector newDirection = transform.apply(oldDirection).subtract(transform.apply(Vector.ZERO)).normalize();
-        StateValue newValue = null;
+        Vector newValue = null;
         double closest = -2;
         boolean found = false;
 
-        for (StateValue v : state.valueMap().values()) {
-            if (v.getDirection() != null) {
-                double dot = v.getDirection().normalize().dot(newDirection);
-                if (dot >= closest) {
-                    closest = dot;
-                    newValue = v;
-                    found = true;
-                }
+        for (Direction v : state.getValues()) {
+            double dot = v.toVector().normalize().dot(newDirection);
+            if (dot >= closest) {
+                closest = dot;
+                newValue = v.toVector();
+                found = true;
             }
         }
 

@@ -1,3 +1,28 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven { url = "https://oss.sonatype.org/content/repositories/snapshots/" }
+        jcenter()
+    }
+
+    configurations.all {
+        resolutionStrategy {
+            force 'com.google.guava:guava:21.0'
+            force 'org.ow2.asm:asm:6.0_BETA'
+        }
+    }
+
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.4'
+        classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:4.7.5'
+        classpath 'org.ajoberstar:gradle-git:1.7.2'
+    }
+}
+
+plugins {
+    id 'net.minecrell.licenser' version '0.4.1' apply false
+}
+
 println """
 *******************************************
  You are building WorldEdit!
@@ -12,29 +37,9 @@ println """
 *******************************************
 """
 
-buildscript {
-    repositories {
-        mavenCentral()
-        maven { url = "https://oss.sonatype.org/content/repositories/snapshots/" }
-        jcenter()
-    }
-
-    configurations.all {
-        resolutionStrategy {
-            force 'com.google.guava:guava:17.0'
-        }
-    }
-
-    dependencies {
-        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
-        classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:4.3.0'
-        classpath 'org.ajoberstar:gradle-git:1.5.1'
-    }
-}
-
 allprojects {
     group = 'com.sk89q.worldedit'
-    version = '6.1.7-TF'
+    version = '7.0.0-TF'
 }
 
 if (!project.hasProperty("artifactory_contextUrl")) ext.artifactory_contextUrl = "http://localhost"
@@ -83,17 +88,18 @@ subprojects {
     //apply plugin: 'checkstyle'
     apply plugin: 'com.github.johnrengelman.shadow'
     apply plugin: 'com.jfrog.artifactory'
+    apply plugin: 'net.minecrell.licenser'
 
     ext.internalVersion = version + ";" + gitCommitHash
 
-    sourceCompatibility = 1.7
-    targetCompatibility = 1.7
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
 
     //checkstyle.configFile = new File(rootProject.projectDir, "config/checkstyle/checkstyle.xml")
+    //checkstyle.toolVersion = '7.6.1'
 
     repositories {
         mavenCentral()
-        maven { url "http://repo.bukkit.org/content/groups/public" }
         maven { url "http://maven.sk89q.com/repo/" }
         maven { url "http://repo.maven.apache.org/maven2" }
     }
@@ -145,5 +151,11 @@ subprojects {
 
     artifactoryPublish {
         publishConfigs('archives')
+    }
+
+    license {
+        header = rootProject.file("HEADER.txt")
+        exclude '**/me/totalfreedom/worldedit/*.java'
+        include '**/*.java'
     }
 }
